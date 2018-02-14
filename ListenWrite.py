@@ -278,6 +278,14 @@ class Application(Frame):
         self.tree.grid(row=1,columnspan=5)
         self.scrollBar.config(command=self.tree.yview)
 
+        self.tree.bind("<Button-1>", self.markError)
+
+    def markError(self,event):
+
+        word = self.tree.identify_element(event.x,event.y)
+        word = '%s %s %s' % (self.tree.identify_row(event.y), self.tree.identify_column(event.x), word)
+        self.pinyinLable['text'] = word
+
     def load(self):
         self.listenWriter = ListenWrite(self)
         self.listenWriter.setDaemon(True)
