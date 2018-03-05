@@ -93,7 +93,7 @@ target/
 celerybeat-schedule 
 
 
-# SageMath parsed files 
+# SageMath parsed files
 *.sage.py 
 
 
