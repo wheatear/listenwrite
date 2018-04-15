@@ -21,6 +21,7 @@ import tkFont
 import ttk
 import pypinyin
 import threading
+# import wx
 
 
 
