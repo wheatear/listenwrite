@@ -28,26 +28,28 @@ class MyFrame1 ( wx.Frame ):
 		
 		# Grid
 		self.m_grid2.CreateGrid( 10, 6 )
-		self.m_grid2.EnableEditing( True )
+		self.m_grid2.EnableEditing( False )
 		self.m_grid2.EnableGridLines( True )
 		self.m_grid2.EnableDragGridSize( False )
 		self.m_grid2.SetMargins( 0, 0 )
 		
 		# Columns
+		self.m_grid2.SetColSize( 0, 100 )
 		self.m_grid2.EnableDragColMove( False )
 		self.m_grid2.EnableDragColSize( True )
 		self.m_grid2.SetColLabelSize( 30 )
 		self.m_grid2.SetColLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
 		
 		# Rows
-		self.m_grid2.EnableDragRowSize( True )
-		self.m_grid2.SetRowLabelSize( 80 )
+		self.m_grid2.AutoSizeRows()
+		self.m_grid2.EnableDragRowSize( False )
+		self.m_grid2.SetRowLabelSize( 30 )
 		self.m_grid2.SetRowLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
 		
 		# Label Appearance
 		
 		# Cell Defaults
-		self.m_grid2.SetDefaultCellAlignment( wx.ALIGN_LEFT, wx.ALIGN_TOP )
+		self.m_grid2.SetDefaultCellAlignment( wx.ALIGN_RIGHT, wx.ALIGN_TOP )
 		bSizer3.Add( self.m_grid2, 0, wx.ALL, 5 )
 		
 		bSizer5 = wx.BoxSizer( wx.HORIZONTAL )

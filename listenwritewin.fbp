@@ -107,14 +107,14 @@
                         <property name="aui_position"></property>
                         <property name="aui_row"></property>
                         <property name="autosize_cols">0</property>
-                        <property name="autosize_rows">0</property>
+                        <property name="autosize_rows">1</property>
                         <property name="best_size"></property>
                         <property name="bg"></property>
                         <property name="caption"></property>
                         <property name="caption_visible">1</property>
                         <property name="cell_bg"></property>
                         <property name="cell_font"></property>
-                        <property name="cell_horiz_alignment">wxALIGN_LEFT</property>
+                        <property name="cell_horiz_alignment">wxALIGN_RIGHT</property>
                         <property name="cell_text"></property>
                         <property name="cell_vert_alignment">wxALIGN_TOP</property>
                         <property name="center_pane">0</property>
@@ -124,7 +124,7 @@
                         <property name="col_label_values"></property>
                         <property name="col_label_vert_alignment">wxALIGN_CENTRE</property>
                         <property name="cols">6</property>
-                        <property name="column_sizes"></property>
+                        <property name="column_sizes">100</property>
                         <property name="context_help"></property>
                         <property name="context_menu">1</property>
                         <property name="default_pane">0</property>
@@ -134,8 +134,8 @@
                         <property name="drag_col_move">0</property>
                         <property name="drag_col_size">1</property>
                         <property name="drag_grid_size">0</property>
-                        <property name="drag_row_size">1</property>
-                        <property name="editing">1</property>
+                        <property name="drag_row_size">0</property>
+                        <property name="editing">0</property>
                         <property name="enabled">1</property>
                         <property name="fg"></property>
                         <property name="floatable">1</property>
@@ -166,7 +166,7 @@
                         <property name="pos"></property>
                         <property name="resize">Resizable</property>
                         <property name="row_label_horiz_alignment">wxALIGN_CENTRE</property>
-                        <property name="row_label_size">80</property>
+                        <property name="row_label_size">30</property>
                         <property name="row_label_values"></property>
                         <property name="row_label_vert_alignment">wxALIGN_CENTRE</property>
                         <property name="row_sizes"></property>

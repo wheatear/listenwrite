@@ -34,7 +34,8 @@ class ListenWord(object):
         self.spd = aipClient.voiceCfg['spd']
         # self.sleepSeconds = len(word) / 3 * 2
         self.sleepSeconds = len(word)
-        self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\\u','')
+        # self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\\u','')
+        self.wordKey = word.encode('unicode_escape').replace(b'\\u',b'').decode()
         self.makePinyin()
 
     def prepareVoice(self):
@@ -51,7 +52,8 @@ class ListenWord(object):
         f.close()
 
     def makePinyin(self):
-        uword = self.word.decode('utf-8')
+        # uword = self.word.decode('utf-8')
+        uword = self.word
         self.pinyin = pypinyin.pinyin(uword)
         self.wordNum = len(self.pinyin)
         self.sleepSeconds = self.wordNum * 2
@@ -381,27 +383,52 @@ class Application(Frame):
 class LisWriFram(listenwritewin.MyFrame1):
     def __init__(self, parent):
         super(self.__class__, self).__init__(parent)
+        self.wordCount = 0
 
-    def loadWords(self):
+    def loadWords(self, event):
         self.listenWriter = ListenWrite(self)
         self.listenWriter.setDaemon(True)
         self.listenWriter.loadWords()
         self.loaded = 1
 
-    def start(self):
+    def start(self, event):
         # name = self.nameInput.get() or 'world'
         # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
         if self.loaded == 0:
             self.load()
         self.wordCount = 0
-        self.columnCount = -1
-        self.currentItem = self.tree.insert('', 'end')
+        # self.columnCount = -1
+        # self.currentItem = self.tree.insert('', 'end')
         # self.listenWords()
         self.listenWriter.start()
 
-    def nextWord(self):
+    def nextWord(self, event):
         # self.listenWriter.player.nextOne = 1
         self.nextOne = 1
+
+    def displayPinyin(self, pinyin):
+        str = ''
+        num = len(pinyin)
+        for i in range(num):
+            py = pinyin[i][0].encode('utf-8')
+            str = '%s %s' % (str,py)
+        # print(str)
+        self.m_staticText8.label = str
+        # self.pinyinLable['text'] = str
+        # ft = tkFont.Font(size=30)
+        # self.pinyinLable['font'] = ft
+        # print('font: %s' % self.pinyinLable['font'])
+
+        self.wordCount += 1
+        row = self.wordCount // 6
+        col = self.wordCount % 6
+        self.m_grid2.SetCellValue(row, col, str)
+        # self.columnCount += 1
+        # if self.columnCount >= self.columnNum:
+        #     self.columnCount = 0
+        #     self.rowCount += 1
+        #     self.currentItem = self.tree.insert('', 'end')
+        # self.tree.set(self.currentItem, self.columnCount, value=str)
 
 
 # start
