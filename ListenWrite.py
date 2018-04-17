@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import win32api, win32gui
 ct = win32api.GetConsoleTitle()
@@ -15,14 +14,14 @@ from aip import AipSpeech
 import mp3play, time
 import os
 import sqlite3
-from Tkinter import *
-import tkMessageBox
-import tkFont
-import ttk
+from tkinter import *
+import tkinter.messagebox
+import tkinter.font
+import tkinter.ttk
 import pypinyin
 import threading
-# import wx
-
+import wx
+import listenwritewin
 
 
 class ListenWord(object):
@@ -35,7 +34,7 @@ class ListenWord(object):
         self.spd = aipClient.voiceCfg['spd']
         # self.sleepSeconds = len(word) / 3 * 2
         self.sleepSeconds = len(word)
-        self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\u','')
+        self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\\u','')
         self.makePinyin()
 
     def prepareVoice(self):
@@ -44,7 +43,7 @@ class ListenWord(object):
             return
         voice = self.aipClient.getVoice(self.word)
         if voice is None:
-            print('can not make voice of "%s"' % self.word)
+            print(('can not make voice of "%s"' % self.word))
             self.voiceFile = None
             return
         with open(self.voiceFile, 'wb') as f:
@@ -93,8 +92,8 @@ class Builder(object):
     def openFile(self):
         try:
             self.fp = open(self.file, 'r')
-        except IOError, e:
-            print('Can not open file %s: %s' % (self.file, e))
+        except IOError as e:
+            print(('Can not open file %s: %s' % (self.file, e)))
             exit()
         return self.fp
 
@@ -153,7 +152,7 @@ class Player(object):
             return voiceFile
         voice = aipClient.getVoice(tex, self.voiceCfg)
         if voice is None:
-            print('can not make voice of "%s"' % tex)
+            print(('can not make voice of "%s"' % tex))
             return None
         with open(voiceFile, 'wb') as f:
             f.write(voice)
@@ -200,7 +199,7 @@ class AipClient(object):
         if not isinstance(voice, dict):
             return voice
         else:
-            print('make voice error:%s' % voice['err_msg'])
+            print(('make voice error:%s' % voice['err_msg']))
             return None
 
 
@@ -239,8 +238,8 @@ class Application(Frame):
         self.columnCount = 0
         self.rowCount = 0
         # self.listenGroup = []
-        self.ft30 = tkFont.Font(size=30)
-        self.ft25 = tkFont.Font(size=25)
+        self.ft30 = tkinter.font.Font(size=30)
+        self.ft25 = tkinter.font.Font(size=25)
         self.nextOne = 0
         self.loaded = 0
 
@@ -249,7 +248,7 @@ class Application(Frame):
         # self.helpbutton.pack(side='right')
         # self.nameInput = Entry(self)
         # self.nameInput.pack()
-        ft30 = tkFont.Font(size=30)
+        ft30 = tkinter.font.Font(size=30)
         self.loadButton = Button(self, text='加载词语', command=self.load)
         self.loadButton.grid(row=10,column=0,padx=3,sticky=W)
         self.startButton = Button(self, text='开始听写', command=self.start)
@@ -266,7 +265,7 @@ class Application(Frame):
 
         self.scrollBar = Scrollbar(self)
         self.scrollBar.grid(row=1,sticky=E)
-        self.tree = ttk.Treeview(self,
+        self.tree = tkinter.ttk.Treeview(self,
                                  columns=('c1', 'c2', 'c3', 'c4', 'c5', 'c6'),
                                  yscrollcommand=self.scrollBar.set,show='headings')
         self.tree.column('c1', width=150, anchor='center')
@@ -377,7 +376,32 @@ class Application(Frame):
 
                                                                  作者：王新田
                                                                    13520498010'''
-        tkMessageBox.showinfo('Help', msg)
+        tkinter.messagebox.showinfo('Help', msg)
+
+class LisWriFram(listenwritewin.MyFrame1):
+    def __init__(self, parent):
+        super(self.__class__, self).__init__(parent)
+
+    def loadWords(self):
+        self.listenWriter = ListenWrite(self)
+        self.listenWriter.setDaemon(True)
+        self.listenWriter.loadWords()
+        self.loaded = 1
+
+    def start(self):
+        # name = self.nameInput.get() or 'world'
+        # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
+        if self.loaded == 0:
+            self.load()
+        self.wordCount = 0
+        self.columnCount = -1
+        self.currentItem = self.tree.insert('', 'end')
+        # self.listenWords()
+        self.listenWriter.start()
+
+    def nextWord(self):
+        # self.listenWriter.player.nextOne = 1
+        self.nextOne = 1
 
 
 # start
@@ -386,13 +410,19 @@ if __name__ == '__main__':
     # main.loadWords()
     # main.start()
 
-    app = Application()
-    # 设置窗口标题:
-    app.master.title('词语听写工具')
-    # 主消息循环:
-    app.mainloop()
-    # app.load()
+    # # tkinter
+    # app = Application()
+    # # 设置窗口标题:
+    # app.master.title('词语听写工具')
+    # # 主消息循环:
+    # app.mainloop()
+    # # app.load()
 
+    # wx
+    app = wx.App(False)
+    frame = LisWriFram(None)
+    frame.Show(True)
+    app.MainLoop()
 
     # top = Tk()
     # label = Label(top,text='lister write')
