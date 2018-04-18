@@ -384,6 +384,8 @@ class LisWriFram(listenwritewin.MyFrame1):
     def __init__(self, parent):
         super(self.__class__, self).__init__(parent)
         self.wordCount = 0
+        self.loaded = 0
+        self.nextOne = 0
 
     def loadWords(self, event):
         self.listenWriter = ListenWrite(self)
@@ -391,15 +393,11 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.listenWriter.loadWords()
         self.loaded = 1
 
-    def start(self, event):
+    def startListen(self, event):
         # name = self.nameInput.get() or 'world'
         # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
         if self.loaded == 0:
-            self.load()
-        self.wordCount = 0
-        # self.columnCount = -1
-        # self.currentItem = self.tree.insert('', 'end')
-        # self.listenWords()
+            self.loadWords(None)
         self.listenWriter.start()
 
     def nextWord(self, event):
@@ -410,7 +408,7 @@ class LisWriFram(listenwritewin.MyFrame1):
         str = ''
         num = len(pinyin)
         for i in range(num):
-            py = pinyin[i][0].encode('utf-8')
+            py = pinyin[i][0]
             str = '%s %s' % (str,py)
         # print(str)
         self.m_staticText8.label = str
@@ -419,10 +417,10 @@ class LisWriFram(listenwritewin.MyFrame1):
         # self.pinyinLable['font'] = ft
         # print('font: %s' % self.pinyinLable['font'])
 
-        self.wordCount += 1
         row = self.wordCount // 6
         col = self.wordCount % 6
         self.m_grid2.SetCellValue(row, col, str)
+        self.wordCount += 1
         # self.columnCount += 1
         # if self.columnCount >= self.columnNum:
         #     self.columnCount = 0

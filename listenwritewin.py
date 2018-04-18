@@ -18,9 +18,10 @@ import wx.grid
 class MyFrame1 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 615,360 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 785,426 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
-		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+		self.SetFont( wx.Font( 14, 70, 90, 90, False, "宋体" ) )
 		
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
 		
@@ -34,7 +35,12 @@ class MyFrame1 ( wx.Frame ):
 		self.m_grid2.SetMargins( 0, 0 )
 		
 		# Columns
-		self.m_grid2.SetColSize( 0, 100 )
+		self.m_grid2.SetColSize( 0, 120 )
+		self.m_grid2.SetColSize( 1, 120 )
+		self.m_grid2.SetColSize( 2, 120 )
+		self.m_grid2.SetColSize( 3, 120 )
+		self.m_grid2.SetColSize( 4, 120 )
+		self.m_grid2.SetColSize( 5, 120 )
 		self.m_grid2.EnableDragColMove( False )
 		self.m_grid2.EnableDragColSize( True )
 		self.m_grid2.SetColLabelSize( 30 )
@@ -50,6 +56,8 @@ class MyFrame1 ( wx.Frame ):
 		
 		# Cell Defaults
 		self.m_grid2.SetDefaultCellAlignment( wx.ALIGN_RIGHT, wx.ALIGN_TOP )
+		self.m_grid2.SetFont( wx.Font( 14, 70, 90, 90, False, "宋体" ) )
+		
 		bSizer3.Add( self.m_grid2, 0, wx.ALL, 5 )
 		
 		bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
@@ -95,7 +103,7 @@ class MyFrame1 ( wx.Frame ):
 		
 		# Connect Events
 		self.m_button11.Bind( wx.EVT_LEFT_UP, self.loadWords )
-		self.m_button12.Bind( wx.EVT_LEFT_UP, self.start )
+		self.m_button12.Bind( wx.EVT_LEFT_UP, self.startListen )
 		self.m_button13.Bind( wx.EVT_LEFT_UP, self.nextword )
 		self.m_button14.Bind( wx.EVT_LEFT_UP, self.pause )
 		self.m_button15.Bind( wx.EVT_LEFT_UP, self.help )
@@ -108,7 +116,7 @@ class MyFrame1 ( wx.Frame ):
 	def loadWords( self, event ):
 		event.Skip()
 	
-	def start( self, event ):
+	def startListen( self, event ):
 		event.Skip()
 	
 	def nextword( self, event ):
