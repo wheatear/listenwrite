@@ -1,8 +1,8 @@
 
-import win32api, win32gui
-ct = win32api.GetConsoleTitle()
-hd = win32gui.FindWindow(0,ct)
-win32gui.ShowWindow(hd,0)
+# import win32api, win32gui
+# ct = win32api.GetConsoleTitle()
+# hd = win32gui.FindWindow(0,ct)
+# win32gui.ShowWindow(hd,0)
 
 # import ctypes
 # whnd = ctypes.windll.kernel32.GetConsoleWindow()
@@ -384,6 +384,8 @@ class ListenWrite(threading.Thread):
 class LisWriFram(listenwritewin.MyFrame1):
     def __init__(self, parent):
         super(self.__class__, self).__init__(parent)
+        self.listenWriter = ListenWrite(self)
+        self.aListenWords = []
         self.wordCount = 0
         self.loaded = 0
         self.nextOne = 0
@@ -411,24 +413,11 @@ class LisWriFram(listenwritewin.MyFrame1):
         for i in range(num):
             py = pinyin[i][0]
             str = '%s %s' % (str,py)
-        # print(str)
-        # self.m_staticText8.label = str
         self.m_staticText8.LabelText = str
-        # self.pinyinLable['text'] = str
-        # ft = tkFont.Font(size=30)
-        # self.pinyinLable['font'] = ft
-        # print('font: %s' % self.pinyinLable['font'])
-
         row = self.wordCount // 6
         col = self.wordCount % 6
         self.m_grid2.SetCellValue(row, col, str)
         self.wordCount += 1
-        # self.columnCount += 1
-        # if self.columnCount >= self.columnNum:
-        #     self.columnCount = 0
-        #     self.rowCount += 1
-        #     self.currentItem = self.tree.insert('', 'end')
-        # self.tree.set(self.currentItem, self.columnCount, value=str)
 
 
 # start

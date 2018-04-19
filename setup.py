@@ -2,7 +2,7 @@ from cx_Freeze import setup, Executable
 
 # Dependencies are automatically detected, but it might need
 # fine tuning.
-buildOptions = dict(packages = ["queue","uuid","hmac","cgi","nturl2path","idnadata"], excludes = [])
+buildOptions = dict(packages = ["queue","uuid","hmac","cgi","nturl2path"], excludes = [])
 
 # base = 'Console'
 base = 'Win32Gui'
