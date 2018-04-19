@@ -14,10 +14,10 @@ from aip import AipSpeech
 import mp3play, time
 import os
 import sqlite3
-from tkinter import *
-import tkinter.messagebox
-import tkinter.font
-import tkinter.ttk
+# from tkinter import *
+# import tkinter.messagebox
+# import tkinter.font
+# import tkinter.ttk
 import pypinyin
 import threading
 import wx
@@ -29,6 +29,7 @@ class ListenWord(object):
         self.word = word
         self.pinyin = None
         self.wordNum = 0
+        self.voiceFile = None
         self.aipClient = aipClient
         self.person = aipClient.voiceCfg['per']
         self.spd = aipClient.voiceCfg['spd']
@@ -230,155 +231,155 @@ class ListenWrite(threading.Thread):
         self.player.playGroup(self.client)
 
 
-class Application(Frame):
-    def __init__(self, master=None):
-        Frame.__init__(self, master)
-        self.pack()
-        self.createWidgets()
-        self.columnNum = 6
-        self.wordCount = 0
-        self.columnCount = 0
-        self.rowCount = 0
-        # self.listenGroup = []
-        self.ft30 = tkinter.font.Font(size=30)
-        self.ft25 = tkinter.font.Font(size=25)
-        self.nextOne = 0
-        self.loaded = 0
-
-    def createWidgets(self):
-
-        # self.helpbutton.pack(side='right')
-        # self.nameInput = Entry(self)
-        # self.nameInput.pack()
-        ft30 = tkinter.font.Font(size=30)
-        self.loadButton = Button(self, text='加载词语', command=self.load)
-        self.loadButton.grid(row=10,column=0,padx=3,sticky=W)
-        self.startButton = Button(self, text='开始听写', command=self.start)
-        self.startButton.grid(row=10,column=1,sticky=W)
-        self.startButton = Button(self, text='下一个', command=self.nextWord)
-        self.startButton.grid(row=10, column=2)
-        self.helpbutton = Button(self, text='帮助', command=self.help)
-        self.helpbutton.grid(row=10, column=5, sticky=E, padx=3)
-        self.pinyinLable = Label(self,text='拼音', font=ft30)
-        self.pinyinLable.grid(row=9,column=1, columnspan=2, sticky=E+W)
-        self.pinyinLable['font'] = ft30
-        self.wordLable = Label(self, text='词语', font=ft30)
-        self.wordLable.grid(row=9,column=4, columnspan=2, sticky=E+W)
-
-        self.scrollBar = Scrollbar(self)
-        self.scrollBar.grid(row=1,sticky=E)
-        self.tree = tkinter.ttk.Treeview(self,
-                                 columns=('c1', 'c2', 'c3', 'c4', 'c5', 'c6'),
-                                 yscrollcommand=self.scrollBar.set,show='headings')
-        self.tree.column('c1', width=150, anchor='center')
-        self.tree.column('c2', width=150, anchor='center')
-        self.tree.column('c3', width=150, anchor='center')
-        self.tree.column('c4', width=150, anchor='center')
-        self.tree.column('c5', width=150, anchor='center')
-        self.tree.column('c6', width=150, anchor='center')
-
-        self.tree.grid(row=1,columnspan=5)
-        self.scrollBar.config(command=self.tree.yview)
-
-        self.tree.bind("<Button-1>", self.markError)
-
-    def markError(self,event):
-
-        word = self.tree.identify_element(event.x,event.y)
-        word = '%s %s %s' % (self.tree.identify_row(event.y), self.tree.identify_column(event.x), word)
-        self.pinyinLable['text'] = word
-
-    def load(self):
-        self.listenWriter = ListenWrite(self)
-        self.listenWriter.setDaemon(True)
-        self.listenWriter.loadWords()
-        self.loaded = 1
-
-        # wordNum = self.listenWriter.listenGroup.size
-        # j = 0
-        # wordRow = []
-        # for i in range(wordNum):
-        #     if i >= wordNum: break
-        #     j += 1
-        #     if j == 7:
-        #         # self.tree.insert('','end',values=['test'] * 6)
-        #         witem = self.tree.insert('', 'end', values=wordRow)
-        #         # print(witem.tags)
-        #         wordRow = []
-        #         j = 0
-        #     wordRow.append(self.listenWriter.listenGroup.listListenWords[i].pinyin)
-        # if len(wordRow) > 0:
-        #     self.tree.insert('', 'end', values=wordRow)
-        # print('font: %s' % self.tree['font'])
-
-    def displayPinyin(self, pinyin):
-        str = ''
-        num = len(pinyin)
-        for i in range(num):
-            py = pinyin[i][0].encode('utf-8')
-            str = '%s %s' % (str,py)
-        # print(str)
-        self.pinyinLable['text'] = str
-        # ft = tkFont.Font(size=30)
-        # self.pinyinLable['font'] = ft
-        # print('font: %s' % self.pinyinLable['font'])
-        self.wordCount += 1
-        self.columnCount += 1
-        if self.columnCount >= self.columnNum:
-            self.columnCount = 0
-            self.rowCount += 1
-            self.currentItem = self.tree.insert('', 'end')
-        self.tree.set(self.currentItem, self.columnCount, value=str)
-        # self.master.update_idletasks()
-
-    def start(self):
-        # name = self.nameInput.get() or 'world'
-        # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
-        if self.loaded == 0:
-            self.load()
-        self.wordCount = 0
-        self.columnCount = -1
-        self.currentItem = self.tree.insert('', 'end')
-        # self.listenWords()
-        self.listenWriter.start()
-
-    def listenWords(self):
-        self.listenGroup = self.listenWriter.listenGroup
-        self.client = self.listenWriter.client
-        player = self.listenWriter.player
-
-        player.preparePlay(self.client, player.begionWord, player.begionFile)
-        player.preparePlay(self.client, player.endword, player.endFile)
-        player.playOne(player.begionFile, 1)
-
-        for i in range(self.listenGroup.size):
-            listenWord = self.listenGroup.listListenWords[i]
-            wordPinyin = listenWord.pinyin
-            # textPinyin = []
-            # for i in range(len(wordPinyin)):
-            #     textPinyin[i] = wordPinyin[i].encode('utf-8')
-            self.displayPinyin(wordPinyin)
-
-            clip = player.playOne(listenWord.voiceFile, listenWord.sleepSeconds)
-            if self.nextOne == 1:
-                continue
-            player.playOne(listenWord.voiceFile, listenWord.sleepSeconds, clip)
-        player.playOne(player.endFile, 1)
-
-    def nextWord(self):
-        # self.listenWriter.player.nextOne = 1
-        self.nextOne = 1
-
-    def help(self):
-        msg = '''生词听写工具使用方法：
-1.把要听写的词语写入文件listenwords.txt中，词语之间用空格隔开。
-2.行首是#的为注释行，不听写。
-3.程序运行时，会把listenwords.txt文件中所有非#开头的行，读入内存。按空格分隔拆出各个词语，通过语音合成得到读音，依次播放，每个词播放两遍。
-4.当加入新的词语时，需要联网得到读音，请保证网络畅通。
-
-                                                                 作者：王新田
-                                                                   13520498010'''
-        tkinter.messagebox.showinfo('Help', msg)
+# class Application(Frame):
+#     def __init__(self, master=None):
+#         Frame.__init__(self, master)
+#         self.pack()
+#         self.createWidgets()
+#         self.columnNum = 6
+#         self.wordCount = 0
+#         self.columnCount = 0
+#         self.rowCount = 0
+#         # self.listenGroup = []
+#         self.ft30 = tkinter.font.Font(size=30)
+#         self.ft25 = tkinter.font.Font(size=25)
+#         self.nextOne = 0
+#         self.loaded = 0
+#
+#     def createWidgets(self):
+#
+#         # self.helpbutton.pack(side='right')
+#         # self.nameInput = Entry(self)
+#         # self.nameInput.pack()
+#         ft30 = tkinter.font.Font(size=30)
+#         self.loadButton = Button(self, text='加载词语', command=self.load)
+#         self.loadButton.grid(row=10,column=0,padx=3,sticky=W)
+#         self.startButton = Button(self, text='开始听写', command=self.start)
+#         self.startButton.grid(row=10,column=1,sticky=W)
+#         self.startButton = Button(self, text='下一个', command=self.nextWord)
+#         self.startButton.grid(row=10, column=2)
+#         self.helpbutton = Button(self, text='帮助', command=self.help)
+#         self.helpbutton.grid(row=10, column=5, sticky=E, padx=3)
+#         self.pinyinLable = Label(self,text='拼音', font=ft30)
+#         self.pinyinLable.grid(row=9,column=1, columnspan=2, sticky=E+W)
+#         self.pinyinLable['font'] = ft30
+#         self.wordLable = Label(self, text='词语', font=ft30)
+#         self.wordLable.grid(row=9,column=4, columnspan=2, sticky=E+W)
+#
+#         self.scrollBar = Scrollbar(self)
+#         self.scrollBar.grid(row=1,sticky=E)
+#         self.tree = tkinter.ttk.Treeview(self,
+#                                  columns=('c1', 'c2', 'c3', 'c4', 'c5', 'c6'),
+#                                  yscrollcommand=self.scrollBar.set,show='headings')
+#         self.tree.column('c1', width=150, anchor='center')
+#         self.tree.column('c2', width=150, anchor='center')
+#         self.tree.column('c3', width=150, anchor='center')
+#         self.tree.column('c4', width=150, anchor='center')
+#         self.tree.column('c5', width=150, anchor='center')
+#         self.tree.column('c6', width=150, anchor='center')
+#
+#         self.tree.grid(row=1,columnspan=5)
+#         self.scrollBar.config(command=self.tree.yview)
+#
+#         self.tree.bind("<Button-1>", self.markError)
+#
+#     def markError(self,event):
+#
+#         word = self.tree.identify_element(event.x,event.y)
+#         word = '%s %s %s' % (self.tree.identify_row(event.y), self.tree.identify_column(event.x), word)
+#         self.pinyinLable['text'] = word
+#
+#     def load(self):
+#         self.listenWriter = ListenWrite(self)
+#         self.listenWriter.setDaemon(True)
+#         self.listenWriter.loadWords()
+#         self.loaded = 1
+#
+#         # wordNum = self.listenWriter.listenGroup.size
+#         # j = 0
+#         # wordRow = []
+#         # for i in range(wordNum):
+#         #     if i >= wordNum: break
+#         #     j += 1
+#         #     if j == 7:
+#         #         # self.tree.insert('','end',values=['test'] * 6)
+#         #         witem = self.tree.insert('', 'end', values=wordRow)
+#         #         # print(witem.tags)
+#         #         wordRow = []
+#         #         j = 0
+#         #     wordRow.append(self.listenWriter.listenGroup.listListenWords[i].pinyin)
+#         # if len(wordRow) > 0:
+#         #     self.tree.insert('', 'end', values=wordRow)
+#         # print('font: %s' % self.tree['font'])
+#
+#     def displayPinyin(self, pinyin):
+#         str = ''
+#         num = len(pinyin)
+#         for i in range(num):
+#             py = pinyin[i][0].encode('utf-8')
+#             str = '%s %s' % (str,py)
+#         # print(str)
+#         self.pinyinLable['text'] = str
+#         # ft = tkFont.Font(size=30)
+#         # self.pinyinLable['font'] = ft
+#         # print('font: %s' % self.pinyinLable['font'])
+#         self.wordCount += 1
+#         self.columnCount += 1
+#         if self.columnCount >= self.columnNum:
+#             self.columnCount = 0
+#             self.rowCount += 1
+#             self.currentItem = self.tree.insert('', 'end')
+#         self.tree.set(self.currentItem, self.columnCount, value=str)
+#         # self.master.update_idletasks()
+#
+#     def start(self):
+#         # name = self.nameInput.get() or 'world'
+#         # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
+#         if self.loaded == 0:
+#             self.load()
+#         self.wordCount = 0
+#         self.columnCount = -1
+#         self.currentItem = self.tree.insert('', 'end')
+#         # self.listenWords()
+#         self.listenWriter.start()
+#
+#     def listenWords(self):
+#         self.listenGroup = self.listenWriter.listenGroup
+#         self.client = self.listenWriter.client
+#         player = self.listenWriter.player
+#
+#         player.preparePlay(self.client, player.begionWord, player.begionFile)
+#         player.preparePlay(self.client, player.endword, player.endFile)
+#         player.playOne(player.begionFile, 1)
+#
+#         for i in range(self.listenGroup.size):
+#             listenWord = self.listenGroup.listListenWords[i]
+#             wordPinyin = listenWord.pinyin
+#             # textPinyin = []
+#             # for i in range(len(wordPinyin)):
+#             #     textPinyin[i] = wordPinyin[i].encode('utf-8')
+#             self.displayPinyin(wordPinyin)
+#
+#             clip = player.playOne(listenWord.voiceFile, listenWord.sleepSeconds)
+#             if self.nextOne == 1:
+#                 continue
+#             player.playOne(listenWord.voiceFile, listenWord.sleepSeconds, clip)
+#         player.playOne(player.endFile, 1)
+#
+#     def nextWord(self):
+#         # self.listenWriter.player.nextOne = 1
+#         self.nextOne = 1
+#
+#     def help(self):
+#         msg = '''生词听写工具使用方法：
+# 1.把要听写的词语写入文件listenwords.txt中，词语之间用空格隔开。
+# 2.行首是#的为注释行，不听写。
+# 3.程序运行时，会把listenwords.txt文件中所有非#开头的行，读入内存。按空格分隔拆出各个词语，通过语音合成得到读音，依次播放，每个词播放两遍。
+# 4.当加入新的词语时，需要联网得到读音，请保证网络畅通。
+#
+#                                                                  作者：王新田
+#                                                                    13520498010'''
+#         tkinter.messagebox.showinfo('Help', msg)
 
 class LisWriFram(listenwritewin.MyFrame1):
     def __init__(self, parent):
@@ -432,10 +433,6 @@ class LisWriFram(listenwritewin.MyFrame1):
 
 # start
 if __name__ == '__main__':
-    # main = ListenWrite()
-    # main.loadWords()
-    # main.start()
-
     # # tkinter
     # app = Application()
     # # 设置窗口标题:
@@ -449,15 +446,3 @@ if __name__ == '__main__':
     frame = LisWriFram(None)
     frame.Show(True)
     app.MainLoop()
-
-    # top = Tk()
-    # label = Label(top,text='lister write')
-    # label.pack()
-    #
-    #
-    # main = ListenWrite()
-    # btStart = Button(top, text='开始', command=main.start)
-    # btStart.pack()
-    # mainloop()
-
-
