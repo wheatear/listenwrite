@@ -411,7 +411,8 @@ class LisWriFram(listenwritewin.MyFrame1):
             py = pinyin[i][0]
             str = '%s %s' % (str,py)
         # print(str)
-        self.m_staticText8.label = str
+        # self.m_staticText8.label = str
+        self.m_staticText8.LabelText = str
         # self.pinyinLable['text'] = str
         # ft = tkFont.Font(size=30)
         # self.pinyinLable['font'] = ft

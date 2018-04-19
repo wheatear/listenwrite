@@ -18,7 +18,7 @@ import wx.grid
 class MyFrame1 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 785,426 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 1145,426 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 		self.SetFont( wx.Font( 14, 70, 90, 90, False, "宋体" ) )
@@ -35,12 +35,12 @@ class MyFrame1 ( wx.Frame ):
 		self.m_grid2.SetMargins( 0, 0 )
 		
 		# Columns
-		self.m_grid2.SetColSize( 0, 120 )
-		self.m_grid2.SetColSize( 1, 120 )
-		self.m_grid2.SetColSize( 2, 120 )
-		self.m_grid2.SetColSize( 3, 120 )
-		self.m_grid2.SetColSize( 4, 120 )
-		self.m_grid2.SetColSize( 5, 120 )
+		self.m_grid2.SetColSize( 0, 180 )
+		self.m_grid2.SetColSize( 1, 180 )
+		self.m_grid2.SetColSize( 2, 180 )
+		self.m_grid2.SetColSize( 3, 180 )
+		self.m_grid2.SetColSize( 4, 180 )
+		self.m_grid2.SetColSize( 5, 180 )
 		self.m_grid2.EnableDragColMove( False )
 		self.m_grid2.EnableDragColSize( True )
 		self.m_grid2.SetColLabelSize( 30 )
@@ -62,11 +62,11 @@ class MyFrame1 ( wx.Frame ):
 		
 		bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.m_staticText8 = wx.StaticText( self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.Size( 200,-1 ), 0 )
+		self.m_staticText8 = wx.StaticText( self, wx.ID_ANY, u"拼音", wx.Point( 100,-1 ), wx.Size( 300,-1 ), 0 )
 		self.m_staticText8.Wrap( -1 )
 		bSizer5.Add( self.m_staticText8, 0, wx.ALL, 5 )
 		
-		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"词语", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText9.Wrap( -1 )
 		self.m_staticText9.SetMinSize( wx.Size( 200,-1 ) )
 		
@@ -102,11 +102,11 @@ class MyFrame1 ( wx.Frame ):
 		self.Centre( wx.BOTH )
 		
 		# Connect Events
-		self.m_button11.Bind( wx.EVT_LEFT_UP, self.loadWords )
-		self.m_button12.Bind( wx.EVT_LEFT_UP, self.startListen )
-		self.m_button13.Bind( wx.EVT_LEFT_UP, self.nextword )
-		self.m_button14.Bind( wx.EVT_LEFT_UP, self.pause )
-		self.m_button15.Bind( wx.EVT_LEFT_UP, self.help )
+		self.m_button11.Bind( wx.EVT_BUTTON, self.loadWords )
+		self.m_button12.Bind( wx.EVT_BUTTON, self.startListen )
+		self.m_button13.Bind( wx.EVT_BUTTON, self.nextword )
+		self.m_button14.Bind( wx.EVT_BUTTON, self.pause )
+		self.m_button15.Bind( wx.EVT_BUTTON, self.help )
 	
 	def __del__( self ):
 		pass
