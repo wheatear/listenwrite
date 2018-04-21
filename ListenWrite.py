@@ -24,157 +24,6 @@ import wx
 import listenwritewin
 
 
-class ListenWord(object):
-    def __init__(self, word, aipClient):
-        self.word = word
-        self.pinyin = None
-        self.wordNum = 0
-        self.voiceFile = None
-        self.aipClient = aipClient
-        self.person = aipClient.voiceCfg['per']
-        self.spd = aipClient.voiceCfg['spd']
-        # self.sleepSeconds = len(word) / 3 * 2
-        self.sleepSeconds = len(word)
-        # self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\\u','')
-        self.wordKey = word.encode('unicode_escape').replace(b'\\u',b'').decode()
-        self.makePinyin()
-
-    def prepareVoice(self):
-        self.voiceFile = 'voice/%s_%d_%d.mp3' % (self.wordKey, self.person, self.spd)
-        if os.path.isfile(self.voiceFile):
-            return
-        voice = self.aipClient.getVoice(self.word)
-        if voice is None:
-            print(('can not make voice of "%s"' % self.word))
-            self.voiceFile = None
-            return
-        with open(self.voiceFile, 'wb') as f:
-            f.write(voice)
-        f.close()
-
-    def makePinyin(self):
-        # uword = self.word.decode('utf-8')
-        uword = self.word
-        self.pinyin = pypinyin.pinyin(uword)
-        self.wordNum = len(self.pinyin)
-        self.sleepSeconds = self.wordNum * 2
-
-
-class ListenGroup(object):
-    def __init__(self):
-        self.listListenWords = []
-        self.size = len(self.listListenWords)
-
-    def appendWord(self, listenWord):
-        listenWord.prepareVoice()
-        self.listListenWords.append(listenWord)
-        self.size = len(self.listListenWords)
-
-
-class Builder(object):
-    def __init__(self, wordFile, aipClient):
-        self.file = wordFile
-        self.aipClient = aipClient
-        self.person = aipClient.voiceCfg['per']
-        self.lisnGroup = ListenGroup()
-
-    def makeGroup(self):
-        self.lisnGroup.listListenWords = []
-        self.openFile()
-        for line in self.fp:
-            line = line.strip()
-            if len(line) == 0: continue
-            if line[0] == '#': continue
-            lWords = line.split(' ')
-            for word in lWords:
-                lsnWord = ListenWord(word, self.aipClient)
-                self.lisnGroup.appendWord(lsnWord)
-        self.fp.close()
-        return self.lisnGroup
-
-    def openFile(self):
-        try:
-            self.fp = open(self.file, 'r')
-        except IOError as e:
-            print(('Can not open file %s: %s' % (self.file, e)))
-            exit()
-        return self.fp
-
-
-
-class Player(object):
-    def __init__(self, app):
-        self.app = app
-        self.begionFile = 'voice/begion.mp3'
-        self.begionWord = '开始听写'
-        self.endFile = 'voice/end.mp3'
-        self.endword = '听写完毕'
-        self.voiceCfg = {}
-        self.voiceCfg['spd'] = 5  # 语速，取值0-9，默认为5中语速
-        self.voiceCfg['pit'] = 5  # 音调，取值0-9，默认为5中语调
-        self.voiceCfg['vol'] = 12  # 音量，取值0-15，默认为5中音量
-        self.voiceCfg['per'] = 3  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫，默认为普通女
-        self.nextOne = 0
-        self.isContinue = 0
-
-    def setWordGrp(self, listWords):
-        self.grpWords = listWords
-
-    def playGroup(self, aipClient):
-        self.preparePlay(aipClient, self.begionWord, self.begionFile)
-        self.preparePlay(aipClient, self.endword, self.endFile)
-        self.playOne(self.begionFile,1)
-
-        for i in range(self.grpWords.size):
-            listenWord = self.grpWords.listListenWords[i]
-            wordPinyin = listenWord.pinyin
-            # textPinyin = []
-            # for i in range(len(wordPinyin)):
-            #     textPinyin[i] = wordPinyin[i].encode('utf-8')
-            self.app.displayPinyin(wordPinyin)
-            clip = None
-            for k in range(2):
-                clip = self.playOne(listenWord.voiceFile, listenWord.sleepSeconds, clip)
-                for slp in range(listenWord.sleepSeconds):
-                    if self.app.nextOne == 1:
-                        # print{'next one'}
-                        self.app.nextOne = 0
-                        self.isContinue = 1
-                        break
-                    time.sleep(1)
-                if self.isContinue == 1:
-                    break
-            if self.isContinue == 1:
-                self.isContinue = 0
-                continue
-            # self.playOne(listenWord.voiceFile, listenWord.sleepSeconds, clip)
-        self.playOne(self.endFile, 1)
-
-    def preparePlay(self, aipClient, tex, voiceFile):
-        if os.path.isfile(voiceFile):
-            return voiceFile
-        voice = aipClient.getVoice(tex, self.voiceCfg)
-        if voice is None:
-            print(('can not make voice of "%s"' % tex))
-            return None
-        with open(voiceFile, 'wb') as f:
-            f.write(voice)
-        f.close()
-
-    def playOne(self, voiceFile, addSeconds, clip=None):
-        if clip is None:
-            clip = mp3play.load(voiceFile)
-        clipSeconds = clip.seconds() + 1
-        sleepSeconds = addSeconds + clipSeconds
-
-        clip.volume(90)
-        clip.play()
-        # time.sleep(clip.seconds())
-        time.sleep(clipSeconds)
-        clip.stop()
-        return clip
-
-
 class AipClient(object):
     def __init__(self,appId,apiKey,secretKey):
         self.appId = appId
@@ -206,30 +55,228 @@ class AipClient(object):
             return None
 
 
-class ListenWrite(threading.Thread):
+class ListenWord(object):
+    def __init__(self, word, voiceSet, aipClient):
+        self.word = word
+        self.voiceSet = voiceSet
+        self.pinyin = None
+        self.wordNum = len(word)
+        self.voiceFile = None
+        self.aipClient = aipClient
+        # self.sleepSeconds = len(word) / 3 * 2
+        self.sleepSeconds = len(word)
+        # self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\\u','')
+        self.wordKey = word.encode('unicode_escape').replace(b'\\u',b'').decode()
+        self.makePinyin()
+
+    def prepareVoice(self):
+        self.voiceFile = 'voice/%s_%d%d%d%d.mp3' % (self.wordKey, self.voiceSet['per'], self.voiceSet['pit'], self.voiceSet['spd'], self.voiceSet['vol'])
+        if os.path.isfile(self.voiceFile):
+            return self.voiceFile
+        voice = self.aipClient.getVoice(self.word, self.voiceSet)
+        if voice is None:
+            print(('can not make voice of "%s"' % self.word))
+            self.voiceFile = None
+            return None
+        with open(self.voiceFile, 'wb') as f:
+            f.write(voice)
+        f.close()
+        return self.voiceFile
+
+    def makePinyin(self):
+        # uword = self.word.decode('utf-8')
+        uword = self.word
+        self.pinyin = pypinyin.pinyin(uword)
+        self.wordNum = len(self.pinyin)
+        self.sleepSeconds = self.wordNum * 2
+
+
+# class ListenGroup(object):
+#     def __init__(self):
+#         self.listListenWords = []
+#         self.size = len(self.listListenWords)
+#
+#     def appendWord(self, listenWord):
+#         listenWord.prepareVoice()
+#         self.listListenWords.append(listenWord)
+#         self.size = len(self.listListenWords)
+
+
+class Builder(object):
+    def __init__(self, lstwrt):
+        # threading.Thread.__init__(self)
+        self.listenWriter = lstwrt
+        self.file = lstwrt.inFile
+        self.aipClient = lstwrt.client
+        # self.person = aipClient.voiceCfg['per']
+        self.lisnGroup = []
+        self.prdGroup = []
+
+    def loadWordes(self):
+        self.loadPrdWordes()
+        self.openFile()
+        for line in self.fp:
+            line = line.strip()
+            if len(line) == 0: continue
+            if line[0] == '#': continue
+            lWords = line.split()
+            for word in lWords:
+                lsnWord = ListenWord(word, self.listenWriter.listenSet, self.aipClient)
+                self.lisnGroup.append(lsnWord)
+        self.fp.close()
+        return self.lisnGroup
+
+    def loadPrdWordes(self):
+        for word in self.listenWriter.presenteWords:
+            prdWord = ListenWord(word, self.listenWriter.presenterSet, self.aipClient)
+            self.prdGroup.append(prdWord)
+        return self.prdGroup
+
+    def openFile(self):
+        try:
+            self.fp = open(self.file, 'r')
+        except IOError as e:
+            print(('Can not open file %s: %s' % (self.file, e)))
+            exit()
+        return self.fp
+
+    def makeAllVoice(self):
+        self.makeVoice(self.prdGroup)
+        self.makeVoice(self.lisnGroup)
+
+    def makeVoice(self, wordGrp):
+        for word in wordGrp:
+            voicefile = word.prepareVoice()
+            if not voicefile:
+                print('cant make voice for %s' % word.word)
+
+
+class Player(object):
+    def __init__(self, app):
+        # threading.Thread.__init__(self)
+        self.app = app
+        self.volume = 90
+        self.nextOne = 0
+        self.pause = 0
+        self.playStart = 0
+        self.repeatNum = 1
+        self.playing = 0
+
+    def playAll(self):
+        self.playStart = 0
+        self.playOne(self.app.listenWriter.builder.prdGroup[0])
+        if self.playGroup():
+            self.playOne(self.app.listenWriter.builder.prdGroup[1])
+
+    def playContinue(self):
+        self.pause = 0
+        if self.playGroup():
+            self.playOne(self.app.listenWriter.builder.prdGroup[1])
+
+    def playGroup(self):
+        if self.playing == 1:
+            return
+        self.playing = 1
+        startNum = self.playStart
+        listenGrp = self.app.listenWriter.wordesGroup
+        aPlayNums = range(len(listenGrp))[startNum:]
+        for i in aPlayNums:
+            listenWord = listenGrp[i]
+            if self.repeatNum > 0:
+                wordPinyin = listenWord.pinyin
+                # wx.CallAfter(self.app.displayPinyin,wordPinyin)
+                self.app.displayPinyin(wordPinyin)
+            else:
+                self.repeatNum = 1
+            clip = None
+            for k in range(2):
+                clip = self.playOne(listenWord, clip)
+                for slp in range(listenWord.sleepSeconds):
+                    if self.nextOne == 1 or self.pause == 1:
+                        break
+                    time.sleep(1)
+                if self.nextOne == 1 or self.pause == 1:
+                    break
+            # print('repeat num: %d' % k)
+            if self.nextOne == 1:
+                self.nextOne = 0
+                continue
+            if  self.pause == 1:
+                if k == 1:
+                    self.playStart = i + 1
+                else:
+                    self.playStart = i
+                self.repeatNum = k
+                self.playing = 0
+                return False
+        self.playing  = 0
+        return True
+
+    def playOne(self, listenWord, clip=None):
+        if clip is None:
+            clip = mp3play.load(listenWord.voiceFile)
+        clipSeconds = clip.seconds() + 1
+        # sleepSeconds = listenWord.addSeconds + clipSeconds
+
+        clip.volume(self.volume)
+        clip.play()
+        # time.sleep(clip.seconds())
+        time.sleep(clipSeconds)
+        clip.stop()
+        return clip
+
+
+class ListenWrite(object):
     APP_ID = '10568246'
     API_KEY = '6cFFqOMdPr3EIYx4uEpYsD4s'
     SECRET_KEY = '6e2c9e550e3358d1e6fd85030115ae36'
 
     def __init__(self, app):
-        threading.Thread.__init__( self)
         self.app = app
+        self.wordesGroup = []
+        self.prdGroup = []
+        self.presenteWords = []
         self.client = AipClient(ListenWrite.APP_ID, ListenWrite.API_KEY, ListenWrite.SECRET_KEY)
-        self.voiceCfg = {'vol': 8, 'spd': 0, }
+        self.listenSet = {}
+        self.presenterSet = {}
+        self.vioceSet()
+        # self.voiceCfg = {'vol': 8, 'spd': 0, }
         self.inFile = 'listenwords.txt'
-        self.client.setVoiceCfg()
-        self.builder = Builder(self.inFile, self.client)
+        # self.client.setVoiceCfg()
+        self.builder = Builder(self)
         self.player = Player(app)
 
     def loadWords(self):
-        self.listenGroup = self.builder.makeGroup()
-        self.player.setWordGrp(self.listenGroup)
+        # self.listenGroup = self.builder.makeGroup()
+        self.presenteWords = ['开始听写', '听写完毕']
+        self.wordesGroup = self.builder.loadWordes()
 
-    # def start(self):
-    #     self.player.playGroup(self.client)
-    def run(self):
-        self.player.playGroup(self.client)
+    def vioceSet(self):
+        # presenterSet
+        self.presenterSet['spd'] = 5  # 语速，取值0-9，默认为5中语速
+        self.presenterSet['pit'] = 5  # 音调，取值0-9，默认为5中语调
+        self.presenterSet['vol'] = 12  # 音量，取值0-15，默认为5中音量
+        self.presenterSet['per'] = 3  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫，默认为普通女
+        # listenSet
+        self.listenSet['spd'] = 2  # 语速，取值0-9，默认为5中语速
+        self.listenSet['pit'] = 5  # 音调，取值0-9，默认为5中语调
+        self.listenSet['vol'] = 12  # 音量，取值0-15，默认为5中音量
+        self.listenSet['per'] = 0  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫，默认为普通女
 
+    def makeVoice(self):
+        self.builder.makeAllVoice()
+
+    def playWordes(self):
+        self.player.playAll()
+        # t = threading.Thread(target=self.player.playAll(), arg=())
+        # # t.setDaemon(True)
+        # t.start()
+
+    def playContinue(self):
+        self.player.playContinue()
+
+    def pause(self):
+        self.player.pause = 1
 
 # class Application(Frame):
 #     def __init__(self, master=None):
@@ -388,24 +435,47 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.aListenWords = []
         self.wordCount = 0
         self.loaded = 0
-        self.nextOne = 0
+        # self.nextOne = 0
 
     def loadWords(self, event):
-        self.listenWriter = ListenWrite(self)
-        self.listenWriter.setDaemon(True)
-        self.listenWriter.loadWords()
+        # self.listenWriter = ListenWrite(self)
+        # self.listenWriter.setDaemon(True)
         self.loaded = 1
+        self.listenWriter.loadWords()
+        self.loaded = 9
+        t = threading.Thread(target=self.listenWriter.makeVoice)
+        t.setDaemon(True)
+        t.start()
+        # t.join()
+        # self.loaded = 9
 
     def startListen(self, event):
         # name = self.nameInput.get() or 'world'
         # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
         if self.loaded == 0:
             self.loadWords(None)
-        self.listenWriter.start()
+        self.refreshCount()
+        t = threading.Thread(target=self.listenWriter.playWordes)
+        t.setDaemon(True)
+        t.start()
 
     def nextWord(self, event):
         # self.listenWriter.player.nextOne = 1
-        self.nextOne = 1
+        self.listenWriter.player.nextOne = 1
+
+    def pause(self,event):
+        self.listenWriter.pause()
+
+    def playContinue(self, event):
+        t = threading.Thread(target=self.listenWriter.playContinue)
+        t.setDaemon(True)
+        t.start()
+
+    def refreshCount(self):
+        if self.wordCount == 0:
+            return
+        row = self.wordCount // 6
+        self.wordCount = (row + 1) * 6
 
     def displayPinyin(self, pinyin):
         str = ''
@@ -413,6 +483,8 @@ class LisWriFram(listenwritewin.MyFrame1):
         for i in range(num):
             py = pinyin[i][0]
             str = '%s %s' % (str,py)
+        if len(str) > 0:
+            str = str[1:]
         self.m_staticText8.LabelText = str
         row = self.wordCount // 6
         col = self.wordCount % 6
@@ -434,4 +506,6 @@ if __name__ == '__main__':
     app = wx.App(False)
     frame = LisWriFram(None)
     frame.Show(True)
+    frame.loadWords(None)
     app.MainLoop()
+

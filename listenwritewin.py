@@ -18,7 +18,7 @@ import wx.grid
 class MyFrame1 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 1145,426 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"词语听写", pos = wx.DefaultPosition, size = wx.Size( 1145,426 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 		self.SetFont( wx.Font( 14, 70, 90, 90, False, "宋体" ) )
@@ -89,8 +89,11 @@ class MyFrame1 ( wx.Frame ):
 		self.m_button14 = wx.Button( self, wx.ID_ANY, u"暂停", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer6.Add( self.m_button14, 0, wx.ALL, 5 )
 		
-		self.m_button15 = wx.Button( self, wx.ID_ANY, u"帮助", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button15 = wx.Button( self, wx.ID_ANY, u"继续", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer6.Add( self.m_button15, 0, wx.ALL, 5 )
+		
+		self.m_button6 = wx.Button( self, wx.ID_ANY, u"帮助", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer6.Add( self.m_button6, 0, wx.ALL, 5 )
 		
 		
 		bSizer3.Add( bSizer6, 1, wx.EXPAND, 5 )
@@ -104,9 +107,10 @@ class MyFrame1 ( wx.Frame ):
 		# Connect Events
 		self.m_button11.Bind( wx.EVT_BUTTON, self.loadWords )
 		self.m_button12.Bind( wx.EVT_BUTTON, self.startListen )
-		self.m_button13.Bind( wx.EVT_BUTTON, self.nextword )
+		self.m_button13.Bind( wx.EVT_BUTTON, self.nextWord )
 		self.m_button14.Bind( wx.EVT_BUTTON, self.pause )
-		self.m_button15.Bind( wx.EVT_BUTTON, self.help )
+		self.m_button15.Bind( wx.EVT_BUTTON, self.playContinue )
+		self.m_button6.Bind( wx.EVT_BUTTON, self.help )
 	
 	def __del__( self ):
 		pass
@@ -119,10 +123,13 @@ class MyFrame1 ( wx.Frame ):
 	def startListen( self, event ):
 		event.Skip()
 	
-	def nextword( self, event ):
+	def nextWord( self, event ):
 		event.Skip()
 	
 	def pause( self, event ):
+		event.Skip()
+	
+	def playContinue( self, event ):
 		event.Skip()
 	
 	def help( self, event ):
