@@ -1,32 +1,27 @@
+import sys
 from cx_Freeze import setup, Executable
 
 # Dependencies are automatically detected, but it might need
 # fine tuning.
-buildOptions = dict(packages = ["queue","uuid","hmac","cgi","nturl2path"], excludes = [])
+buildOptions = dict(packages = ["queue","uuid","hmac","cgi","nturl2path"], excludes = [], include_msvcr = True)
 
+# GUI applications require a different base on Windows (the default is for a
+# console application).
 # base = 'Console'
-base = 'Win32Gui'
+base = None
+if sys.platform == "win32":
+    base = 'Win32Gui'
 
 executables = [
     Executable('ListenWrite.py', base=base)
 ]
+# , icon='icon.ico'
 
-setup(name='test_project',
+setup(name='listenwrite',
       version = '3.0',
-      description = 'test for cxfreeze',
+      description = 'listen and write tools',
       options = dict(build_exe = buildOptions),
       executables = executables)
 
 
 
-
-
-# from cx_Freeze import setup, Executable
-#
-# base = 'Win32Gui'
-#
-# setup(name='listenwrite exe',
-#       version='3.0',
-#       description='listenwrite exe file',
-#       executables=[Executable("ListenWrite.py",base=base)]
-#       )

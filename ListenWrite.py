@@ -64,7 +64,7 @@ class ListenWord(object):
         self.voiceFile = None
         self.aipClient = aipClient
         # self.sleepSeconds = len(word) / 3 * 2
-        self.sleepSeconds = len(word)
+        self.sleepSeconds = len(word) * 2
         # self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\\u','')
         self.wordKey = word.encode('unicode_escape').replace(b'\\u',b'').decode()
         self.makePinyin()
