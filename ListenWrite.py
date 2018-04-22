@@ -13,6 +13,7 @@
 from aip import AipSpeech
 import mp3play, time
 import os
+import re
 import sqlite3
 # from tkinter import *
 # import tkinter.messagebox
@@ -91,55 +92,6 @@ class ListenWord(object):
         self.sleepSeconds = self.wordNum * 2
 
 
-class Builder(object):
-    def __init__(self, lstwrt):
-        # threading.Thread.__init__(self)
-        self.listenWriter = lstwrt
-        self.file = lstwrt.inFile
-        self.aipClient = lstwrt.client
-        # self.person = aipClient.voiceCfg['per']
-        self.lisnGroup = []
-        self.prdGroup = []
-
-    def loadWordes(self):
-        self.loadPrdWordes()
-        self.openFile()
-        for line in self.fp:
-            line = line.strip()
-            if len(line) == 0: continue
-            if line[0] == '#': continue
-            lWords = line.split()
-            for word in lWords:
-                lsnWord = ListenWord(word, self.listenWriter.listenSet, self.aipClient)
-                self.lisnGroup.append(lsnWord)
-        self.fp.close()
-        return self.lisnGroup
-
-    def loadPrdWordes(self):
-        for word in self.listenWriter.presenteWords:
-            prdWord = ListenWord(word, self.listenWriter.presenterSet, self.aipClient)
-            self.prdGroup.append(prdWord)
-        return self.prdGroup
-
-    def openFile(self):
-        try:
-            self.fp = open(self.file, 'r')
-        except IOError as e:
-            print(('Can not open file %s: %s' % (self.file, e)))
-            exit()
-        return self.fp
-
-    def makeAllVoice(self):
-        self.makeVoice(self.prdGroup)
-        self.makeVoice(self.lisnGroup)
-
-    def makeVoice(self, wordGrp):
-        for word in wordGrp:
-            voicefile = word.prepareVoice()
-            if not voicefile:
-                print('cant make voice for %s' % word.word)
-
-
 class Player(object):
     def __init__(self, app):
         # threading.Thread.__init__(self)
@@ -215,6 +167,274 @@ class Player(object):
         return clip
 
 
+class Builder(object):
+    def __init__(self, lstwrt):
+        self.listenWriter = lstwrt
+        self.dataSource = lstwrt.dataSource
+        self.aipClient = lstwrt.client
+        # self.person = aipClient.voiceCfg['per']
+        self.lisnGroup = []
+        self.prdGroup = []
+
+    def loadWordes(self):
+        self.loadPrdWordes()
+        self.openDs()
+        for line in self.fp:
+            line = line.strip()
+            if len(line) == 0: continue
+            if line[0] == '#': continue
+            lWords = line.split()
+            for word in lWords:
+                lsnWord = ListenWord(word, self.listenWriter.listenSet, self.aipClient)
+                self.lisnGroup.append(lsnWord)
+        self.fp.close()
+        return self.lisnGroup
+
+    def loadPrdWordes(self):
+        for word in self.listenWriter.presenteWords:
+            prdWord = ListenWord(word, self.listenWriter.presenterSet, self.aipClient)
+            self.prdGroup.append(prdWord)
+        return self.prdGroup
+
+    def openDs(self):
+        try:
+            self.fp = open(self.dataSource, 'r')
+        except IOError as e:
+            print(('Can not open file %s: %s' % (self.dataSource, e)))
+            exit()
+        return self.fp
+
+    def makeAllVoice(self):
+        self.makeVoice(self.prdGroup)
+        self.makeVoice(self.lisnGroup)
+
+    def makeVoice(self, wordGrp):
+        for word in wordGrp:
+            voicefile = word.prepareVoice()
+            if not voicefile:
+                print('cant make voice for %s' % word.word)
+
+
+class DbBuilder(Builder):
+    dSql = {}
+    dSql['SearchPress'] = 'select pressid from lw_press where pname = ?'
+    dSql['InsertPress'] = 'insert into ls_press(pname) values(:PNAME)'
+    dSql['SearchBook'] = 'select bookid from lw_book where bookname=:BOOKNAME and grade=:GRADE and pressid=:PRESSID'
+    dSql['InsertBook'] = 'insert into lw_book(pressid,bookname,grade) values(:PRESSID,:BOOKNAME,:GRADE)'
+    dSql['SearchUnit'] = 'select unitid from lw_unit where unitname=:UNITNAME and bookid=:BOOKID'
+    dSql['InsertUnit'] = 'insert into lw_unit(bookid,unitname) values(:BOOKID,:UNITNAME)'
+    dSql['SearchLesson'] = 'select lessonid from lw_lesson where lessoncode=:LESSONCODE and lessonname=:LESSONNAME and unitid=:UNITID'
+    dSql['InsertLesson'] = 'insert into lw_lesson(unitid,lessoncode,lessonname) values(:UNITID,:LESSONCODE,:LESSONNAME)'
+    dSql['SearchWord'] = 'select word from lw_word where word=:WORD and lessonid=:LESSONID'
+    dSql['InsertWord'] = 'insert into lw_word(lessonid,word) values(:LESSONID,:WORD)'
+
+    def __init__(self, lstwrt):
+        super(self.__class__, self).__init__(lstwrt)
+        self.db = DbConn(self.dataSource)
+        self.conn = None
+
+    def openDs(self):
+        try:
+            self.conn = self.db.connectServer()
+        except Exception as e:
+            print(('Can not open sqlite %s: %s' % (self.dataSource, e)))
+            exit()
+        return self.conn
+
+    def importWords(self, file):
+        self.openDs()
+        fp = self.openFile(file)
+        pressId = None
+        bookId = None
+        unitId = None
+        lessonId = None
+        p = re.compile(r'^#+')
+        for line in fp:
+            line = line.strip()
+            if len(line) == 0: continue
+            if line[0] == '#':
+                line = p.sub('', line)
+                aItem = line.split()
+                if len(aItem) < 2:
+                    continue
+                section = aItem[0].upper()
+                if section == 'PRESS':
+                    pressId = self.importPress(aItem)
+                elif  section == 'BOOK':
+                    bookId = self.importBook(aItem, pressId)
+                elif section == 'UNIT':
+                    unitId = self.importUnit(aItem, bookId)
+                elif  section == 'LESSON':
+                    lessonId = self.importLesson(aItem, unitId)
+            else:
+                self.importWord(line, lessonId)
+        fp.close()
+
+    def importPress(self, aInfo):
+        pressName = ' '.join(aInfo[1:])
+        dPress = {'PNAME': pressName}
+        searchKey = 'SearchPress'
+        insertKey = 'InsertPress'
+        return self.importCommon(searchKey, insertKey, dPress)
+
+    def importBook(self, aInfo, parentId):
+        bookName = aInfo[1]
+        grade = None
+        if len(aInfo) > 1:
+            grade = aInfo[2]
+        dict = {}
+        dict['BOOKNAME'] = bookName
+        dict['GRADE'] = grade
+        dict['PRESSID'] = parentId
+        searchKey = 'SearchBook'
+        insertKey = 'InsertBook'
+        return self.importCommon(searchKey, insertKey, dict)
+
+    def importUnit(self, aInfo, parentId):
+        unitName = aInfo[1]
+        dict = {}
+        dict['UNITNAME'] = unitName
+        dict['BOOKID'] = parentId
+        searchKey = 'SearchUnit'
+        insertKey = 'InsertUnit'
+        return self.importCommon(searchKey, insertKey, dict)
+
+    def importLesson(self, aInfo, parentId):
+        lessonCode = aInfo[1]
+        lessonName = None
+        if len(aInfo) > 1:
+            lessonName = aInfo[2]
+        dict = {}
+        dict['LESSONCODE'] = lessonCode
+        dict['LESSONNAME'] = lessonName
+        dict['UNITID'] = parentId
+        searchKey = 'SearchLesson'
+        insertKey = 'InsertLesson'
+        return self.importCommon(searchKey, insertKey, dict)
+
+    def importWord(self, aInfo, parentId):
+        searchKey = 'SearchWord'
+        insertKey = 'InsertWord'
+        for word in aInfo:
+            dict = {}
+            dict['WORD'] = word
+            dict['LESSONID'] = parentId
+            self.importCommon(searchKey, insertKey, dict)
+        return
+
+    def importCommon(self, searchKey, insertKey, dicVal):
+        sqlSearch = self.dSql[searchKey]
+        curSearch = self.db.prepareSql(sqlSearch)
+        self.db.executeCur(curSearch, sqlSearch, dicVal)
+        row = self.db.fetchone(curSearch)
+        if row:
+            return row[0]
+        sqlInsert = self.dSql[insertKey]
+        curInsert = self.db.prepareSql(sqlInsert)
+        self.db.executeCur(curInsert, sqlInsert, dicVal)
+        curInsert.connection.commit()
+
+        self.db.executeCur(curSearch, sqlSearch, dicVal)
+        row = self.db.fetchone(curSearch)
+        if row:
+            return row[0]
+        else:
+            return None
+
+    def openFile(self, file):
+        try:
+            fp = open(file, 'r')
+        except IOError as e:
+            print(('Can not open file %s: %s' % (file, e)))
+            exit()
+        return fp
+
+
+class DbConn(object):
+    def __init__(self, dbInfo):
+        self.dbInfo = dbInfo
+        self.conn = None
+        self.dCur = {}
+        # self.connectServer()
+
+    def connectServer(self):
+        if self.conn: return self.conn
+        try:
+            self.conn = sqlite3.connect(self.dbInfo)
+        except Exception as e:
+            # logging.fatal('could not connect to oracle(%s:%s/%s), %s', self.cfg.dbinfo['dbhost'], self.cfg.dbinfo['dbusr'], self.cfg.dbinfo['dbsid'], e)
+            raise Exception(e)
+            # exit()
+        return self.conn
+
+    def prepareSql(self, sql):
+        # logging.info('prepare sql: %s', sql)
+        if sql in self.dCur:
+            return self.dCur[sql]
+        cur = self.conn.cursor()
+        # try:
+        #     cur.prepare(sql)
+        # except sqlite3.DatabaseError as e:
+        #     # logging.error('prepare sql err: %s', sql)
+        #     raise sqlite3.DatabaseError(e)
+        #     return None
+        self.dCur[sql] = cur
+        return cur
+
+    def executemanyCur(self, cur, sql, params):
+        # logging.info('execute cur %s : %s', cur.statement, params)
+        try:
+            cur.executemany(sql, params)
+        except sqlite3.DatabaseError as e:
+            # logging.error('execute sql err %s:%s ', e, cur.statement)
+            raise sqlite3.DatabaseError(e)
+            return None
+        return cur
+
+    def fetchmany(self, cur):
+        # logging.debug('fetch %d rows from %s', cur.arraysize, cur.statement)
+        try:
+            rows = cur.fetchmany()
+        except sqlite3.DatabaseError as e:
+            # logging.error('fetch sql err %s:%s ', e, cur.statement)
+            raise sqlite3.DatabaseError(e)
+            return None
+        return rows
+
+    def fetchone(self, cur):
+        # logging.debug('fethone from %s', cur.statement)
+        try:
+            row = cur.fetchone()
+        except sqlite3.DatabaseError as e:
+            # logging.error('execute sql err %s:%s ', e, cur.statement)
+            raise sqlite3.DatabaseError(e)
+            return None
+        return row
+
+    def fetchall(self, cur):
+        # logging.debug('fethone from %s', cur.statement)
+        try:
+            rows = cur.fetchall()
+        except sqlite3.DatabaseError as e:
+            # logging.error('execute sql err %s:%s ', e, cur.statement)
+            raise sqlite3.DatabaseError(e)
+            return None
+        return rows
+
+    def executeCur(self, cur, sql, params=None):
+        # logging.info('execute cur %s', cur.statement)
+        # try:
+        if params is None:
+                cur.execute(sql)
+        else:
+                cur.execute(sql, params)
+        # except sqlite3.DatabaseError as e:
+        #     # logging.error('execute sql err %s:%s ', e, cur.statement)
+        #     raise sqlite3.DatabaseError(e)
+        #     return None
+        return cur
+
+
 class ListenWrite(object):
     APP_ID = '10568246'
     API_KEY = '6cFFqOMdPr3EIYx4uEpYsD4s'
@@ -230,9 +450,10 @@ class ListenWrite(object):
         self.presenterSet = {}
         self.vioceSet()
         # self.voiceCfg = {'vol': 8, 'spd': 0, }
-        self.inFile = 'listenwords.txt'
+        # self.dataSource = 'listenwords.txt'
+        self.dataSource = 'grad4b.txt'
         # self.client.setVoiceCfg()
-        self.builder = Builder(self)
+        self.builder = DbBuilder(self)
         self.player = Player(app)
 
     def loadWords(self):
@@ -257,9 +478,6 @@ class ListenWrite(object):
 
     def playWordes(self):
         self.player.playAll()
-        # t = threading.Thread(target=self.player.playAll(), arg=())
-        # # t.setDaemon(True)
-        # t.start()
 
     def playContinue(self):
         self.player.playContinue()
@@ -267,8 +485,8 @@ class ListenWrite(object):
     def pause(self):
         self.player.pause = 1
 
-    def loadFromFile(self, file):
-        pass
+    def importWords(self, file):
+        self.builder.importWords(file)
 
 # class Application(Frame):
 #     def __init__(self, master=None):
@@ -468,7 +686,7 @@ class LisWriFram(listenwritewin.MyFrame1):
         dlg = wx.FileDialog(self, "选择词语文件", os.getcwd(), "", wildcard, wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             file = dlg.GetPath()
-            self.listenWriter.loadFromFile(file)
+            self.listenWriter.importWords(file)
         #     f = open(dlg.GetPath(), 'r')
         #     with f:
         #         data = f.read()
@@ -510,6 +728,6 @@ if __name__ == '__main__':
     app = wx.App(False)
     frame = LisWriFram(None)
     frame.Show(True)
-    frame.loadWords(None)
+    # frame.loadWords(None)
     app.MainLoop()
 
