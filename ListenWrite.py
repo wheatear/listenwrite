@@ -218,15 +218,15 @@ class Builder(object):
 class DbBuilder(Builder):
     dSql = {}
     dSql['SearchPress'] = 'select pressid from lw_press where pname = ?'
-    dSql['InsertPress'] = 'insert into ls_press(pname) values(:PNAME)'
-    dSql['SearchBook'] = 'select bookid from lw_book where bookname=:BOOKNAME and grade=:GRADE and pressid=:PRESSID'
-    dSql['InsertBook'] = 'insert into lw_book(pressid,bookname,grade) values(:PRESSID,:BOOKNAME,:GRADE)'
-    dSql['SearchUnit'] = 'select unitid from lw_unit where unitname=:UNITNAME and bookid=:BOOKID'
-    dSql['InsertUnit'] = 'insert into lw_unit(bookid,unitname) values(:BOOKID,:UNITNAME)'
-    dSql['SearchLesson'] = 'select lessonid from lw_lesson where lessoncode=:LESSONCODE and lessonname=:LESSONNAME and unitid=:UNITID'
-    dSql['InsertLesson'] = 'insert into lw_lesson(unitid,lessoncode,lessonname) values(:UNITID,:LESSONCODE,:LESSONNAME)'
-    dSql['SearchWord'] = 'select word from lw_word where word=:WORD and lessonid=:LESSONID'
-    dSql['InsertWord'] = 'insert into lw_word(lessonid,word) values(:LESSONID,:WORD)'
+    dSql['InsertPress'] = 'insert into ls_press(pname) values(?)'
+    dSql['SearchBook'] = 'select bookid from lw_book where pressid=? and bookname=? and grade=?'
+    dSql['InsertBook'] = 'insert into lw_book(pressid,bookname,grade) values(?,?,?)'
+    dSql['SearchUnit'] = 'select unitid from lw_unit where bookid=? and unitname=?'
+    dSql['InsertUnit'] = 'insert into lw_unit(bookid,unitname) values(?,?)'
+    dSql['SearchLesson'] = 'select lessonid from lw_lesson where unitid=? and lessoncode=? and lessonname=?'
+    dSql['InsertLesson'] = 'insert into lw_lesson(unitid,lessoncode,lessonname) values(?,?,?)'
+    dSql['SearchWord'] = 'select word from lw_word where lessonid=? and word=?'
+    dSql['InsertWord'] = 'insert into lw_word(lessonid,word) values(?,?)'
 
     def __init__(self, lstwrt):
         super(self.__class__, self).__init__(lstwrt)
@@ -271,55 +271,62 @@ class DbBuilder(Builder):
         fp.close()
 
     def importPress(self, aInfo):
-        pressName = ' '.join(aInfo[1:])
+        # pressName = ' '.join(aInfo[1:])
+        pressName = aInfo[1]
         dPress = {'PNAME': pressName}
+        aPress = (pressName, )
         searchKey = 'SearchPress'
         insertKey = 'InsertPress'
-        return self.importCommon(searchKey, insertKey, dPress)
+        return self.importCommon(searchKey, insertKey, aPress)
 
     def importBook(self, aInfo, parentId):
         bookName = aInfo[1]
         grade = None
-        if len(aInfo) > 1:
+        if len(aInfo) > 2:
             grade = aInfo[2]
         dict = {}
         dict['BOOKNAME'] = bookName
         dict['GRADE'] = grade
         dict['PRESSID'] = parentId
+        aBook = (parentId, bookName, grade)
         searchKey = 'SearchBook'
         insertKey = 'InsertBook'
-        return self.importCommon(searchKey, insertKey, dict)
+        return self.importCommon(searchKey, insertKey, aBook)
 
     def importUnit(self, aInfo, parentId):
         unitName = aInfo[1]
         dict = {}
         dict['UNITNAME'] = unitName
         dict['BOOKID'] = parentId
+        aUnit = (parentId, unitName)
         searchKey = 'SearchUnit'
         insertKey = 'InsertUnit'
-        return self.importCommon(searchKey, insertKey, dict)
+        return self.importCommon(searchKey, insertKey, aUnit)
 
     def importLesson(self, aInfo, parentId):
         lessonCode = aInfo[1]
         lessonName = None
-        if len(aInfo) > 1:
+        if len(aInfo) > 2:
             lessonName = aInfo[2]
         dict = {}
         dict['LESSONCODE'] = lessonCode
         dict['LESSONNAME'] = lessonName
         dict['UNITID'] = parentId
+        aLesson = (parentId, lessonCode, lessonName)
         searchKey = 'SearchLesson'
         insertKey = 'InsertLesson'
-        return self.importCommon(searchKey, insertKey, dict)
+        return self.importCommon(searchKey, insertKey, aLesson)
 
-    def importWord(self, aInfo, parentId):
+    def importWord(self, line, parentId):
         searchKey = 'SearchWord'
         insertKey = 'InsertWord'
+        aInfo = line.split()
         for word in aInfo:
-            dict = {}
-            dict['WORD'] = word
-            dict['LESSONID'] = parentId
-            self.importCommon(searchKey, insertKey, dict)
+            # dict = {}
+            # dict['WORD'] = word
+            # dict['LESSONID'] = parentId
+            aWord = (parentId, word)
+            self.importCommon(searchKey, insertKey, aWord)
         return
 
     def importCommon(self, searchKey, insertKey, dicVal):
@@ -424,6 +431,7 @@ class DbConn(object):
     def executeCur(self, cur, sql, params=None):
         # logging.info('execute cur %s', cur.statement)
         # try:
+        print('sql: %s . para: %s' % (sql, params))
         if params is None:
                 cur.execute(sql)
         else:
@@ -451,7 +459,7 @@ class ListenWrite(object):
         self.vioceSet()
         # self.voiceCfg = {'vol': 8, 'spd': 0, }
         # self.dataSource = 'listenwords.txt'
-        self.dataSource = 'grad4b.txt'
+        self.dataSource = 'lessonwords.db'
         # self.client.setVoiceCfg()
         self.builder = DbBuilder(self)
         self.player = Player(app)
