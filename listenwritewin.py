@@ -101,6 +101,33 @@ class MyFrame1 ( wx.Frame ):
 		
 		self.SetSizer( bSizer3 )
 		self.Layout()
+		self.m_menubar1 = wx.MenuBar( 0 )
+		self.m_menu1 = wx.Menu()
+		self.m_menuItem1 = wx.MenuItem( self.m_menu1, wx.ID_ANY, u"导入词语", wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menu1.Append( self.m_menuItem1 )
+		
+		self.m_menubar1.Append( self.m_menu1, u"文件" ) 
+		
+		self.m_menu2 = wx.Menu()
+		self.m_menuItem2 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"听写生词", wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menu2.Append( self.m_menuItem2 )
+		
+		self.m_menuItem3 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"听写错词", wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menu2.Append( self.m_menuItem3 )
+		
+		self.m_menubar1.Append( self.m_menu2, u"听写" ) 
+		
+		self.m_menu3 = wx.Menu()
+		self.m_menubar1.Append( self.m_menu3, u"选项" ) 
+		
+		self.m_menu4 = wx.Menu()
+		self.m_menuItem4 = wx.MenuItem( self.m_menu4, wx.ID_ANY, u"帮助", wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menu4.Append( self.m_menuItem4 )
+		
+		self.m_menubar1.Append( self.m_menu4, u"帮助" ) 
+		
+		self.SetMenuBar( self.m_menubar1 )
+		
 		
 		self.Centre( wx.BOTH )
 		
@@ -111,6 +138,7 @@ class MyFrame1 ( wx.Frame ):
 		self.m_button14.Bind( wx.EVT_BUTTON, self.pause )
 		self.m_button15.Bind( wx.EVT_BUTTON, self.playContinue )
 		self.m_button6.Bind( wx.EVT_BUTTON, self.help )
+		self.Bind( wx.EVT_MENU, self.loadFromFile, id = self.m_menuItem1.GetId() )
 	
 	def __del__( self ):
 		pass
@@ -133,6 +161,9 @@ class MyFrame1 ( wx.Frame ):
 		event.Skip()
 	
 	def help( self, event ):
+		event.Skip()
+	
+	def loadFromFile( self, event ):
 		event.Skip()
 	
 

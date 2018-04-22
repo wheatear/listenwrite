@@ -91,17 +91,6 @@ class ListenWord(object):
         self.sleepSeconds = self.wordNum * 2
 
 
-# class ListenGroup(object):
-#     def __init__(self):
-#         self.listListenWords = []
-#         self.size = len(self.listListenWords)
-#
-#     def appendWord(self, listenWord):
-#         listenWord.prepareVoice()
-#         self.listListenWords.append(listenWord)
-#         self.size = len(self.listListenWords)
-
-
 class Builder(object):
     def __init__(self, lstwrt):
         # threading.Thread.__init__(self)
@@ -277,6 +266,9 @@ class ListenWrite(object):
 
     def pause(self):
         self.player.pause = 1
+
+    def loadFromFile(self, file):
+        pass
 
 # class Application(Frame):
 #     def __init__(self, master=None):
@@ -470,6 +462,18 @@ class LisWriFram(listenwritewin.MyFrame1):
         t = threading.Thread(target=self.listenWriter.playContinue)
         t.setDaemon(True)
         t.start()
+
+    def loadFromFile(self, event):
+        wildcard = "Text Files (*.txt)|*.txt"
+        dlg = wx.FileDialog(self, "选择词语文件", os.getcwd(), "", wildcard, wx.FD_OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            file = dlg.GetPath()
+            self.listenWriter.loadFromFile(file)
+        #     f = open(dlg.GetPath(), 'r')
+        #     with f:
+        #         data = f.read()
+        #         self.text.SetValue(data)
+        dlg.Destroy()
 
     def refreshCount(self):
         if self.wordCount == 0:
