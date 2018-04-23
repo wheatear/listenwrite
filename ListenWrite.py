@@ -228,6 +228,11 @@ class DbBuilder(Builder):
     dSql['SearchWord'] = 'select word from lw_word where lessonid=? and word=?'
     dSql['InsertWord'] = 'insert into lw_word(lessonid,word) values(?,?)'
 
+    dSql['ChoicePress'] = 'select pressid,pname from lw_press'
+    dSql['ChoiceBook'] = 'select bookid,bookname,grade from lw_book where pressid=?'
+    dSql['ChoiceUnit'] = 'select unitid,unitname from lw_unit where bookid=?'
+    dSql['ChoiceLesson'] = 'select lessonid,lessoncode,lessonname from lw_lesson where unitid=?'
+
     def __init__(self, lstwrt):
         super(self.__class__, self).__init__(lstwrt)
         self.db = DbConn(self.dataSource)
@@ -356,6 +361,21 @@ class DbBuilder(Builder):
             exit()
         return fp
 
+    def loadChoiceCommon(self, choiceKey, itemId):
+        self.openDs()
+        sql = self.dSql[choiceKey]
+        cur = self.db.prepareSql(sql)
+        if itemId:
+            self.db.executeCur(cur, sql, (itemId,))
+        else:
+            self.db.executeCur(cur, sql)
+        rows = self.db.fetchall(cur)
+        dict = {}
+        for row in rows:
+            key = ' '.join(row[1:])
+            dict[key] = row[0]
+        return dict
+
 
 class DbConn(object):
     def __init__(self, dbInfo):
@@ -463,6 +483,7 @@ class ListenWrite(object):
         # self.client.setVoiceCfg()
         self.builder = DbBuilder(self)
         self.player = Player(app)
+        self.dInitSet = {}
 
     def loadWords(self):
         # self.listenGroup = self.builder.makeGroup()
@@ -495,6 +516,31 @@ class ListenWrite(object):
 
     def importWords(self, file):
         self.builder.importWords(file)
+
+    def loadInit(self):
+        dInitSet = {}
+        dChoiceSelected = {'press':'人民教育出版社'}
+        dChoiceSelected['book'] = '语文 四年级下'
+        dChoiceSelected['unit'] = '五单元'
+        dChoiceSelected['lesson'] = '20 乡下人家'
+        dInitSet['ChoiceSelected'] = dChoiceSelected
+
+        dChoicePress = self.builder.loadChoiceCommon('ChoicePress', None)
+        dInitSet['ChoicePress'] = dChoicePress
+
+        pressId = dChoicePress[dChoiceSelected['press']]
+        dChoiceBook = self.builder.loadChoiceCommon('ChoiceBook', pressId)
+        dInitSet['ChoiceBook'] = dChoiceBook
+
+        bookId = dChoiceBook[dChoiceSelected['book']]
+        dChoiceUnit = self.builder.loadChoiceCommon('ChoiceUnit', bookId)
+        dInitSet['ChoiceUnit'] = dChoiceUnit
+
+        unitId = dChoiceUnit[dChoiceSelected['unit']]
+        dChoiceLesson = self.builder.loadChoiceCommon('ChoiceLesson', unitId)
+        dInitSet['ChoiceLesson'] = dChoiceLesson
+        self.dInitSet = dInitSet
+
 
 # class Application(Frame):
 #     def __init__(self, master=None):
@@ -646,6 +692,22 @@ class ListenWrite(object):
 #                                                                    13520498010'''
 #         tkinter.messagebox.showinfo('Help', msg)
 
+class WordChoice(listenwritewin.MyDialog1):
+    def __init__(self, parent):
+        super(self.__class__, self).__init__(parent)
+        self.pressChoice = {}
+        self.bookChoice = {}
+        self.unitChoice = {}
+        self.lessonChoice = {}
+        self.choiceSelected = {}
+
+    def setInit(self, dInitSet):
+        aPressChoice = dInitSet['ChoicePress'].keys()
+        # self.m_choice5.setItems(aPressChoice)
+        for item in aPressChoice:
+            self.m_choice5.Append(item)
+
+
 class LisWriFram(listenwritewin.MyFrame1):
     def __init__(self, parent):
         super(self.__class__, self).__init__(parent)
@@ -653,7 +715,13 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.aListenWords = []
         self.wordCount = 0
         self.loaded = 0
+        self.loadInitSet()
         # self.nextOne = 0
+
+    def loadInitSet(self):
+        t = threading.Thread(target=self.listenWriter.loadInit)
+        t.setDaemon(True)
+        t.start()
 
     def loadWords(self, event):
         # self.listenWriter = ListenWrite(self)
@@ -700,6 +768,11 @@ class LisWriFram(listenwritewin.MyFrame1):
         #         data = f.read()
         #         self.text.SetValue(data)
         dlg.Destroy()
+
+    def toListen(self, event):
+        selectForm = WordChoice(self)
+        selectForm.setInit(self.listenWriter.dInitSet)
+        selectForm.ShowModal()
 
     def refreshCount(self):
         if self.wordCount == 0:
