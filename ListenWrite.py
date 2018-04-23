@@ -703,9 +703,17 @@ class WordChoice(listenwritewin.MyDialog1):
 
     def setInit(self, dInitSet):
         aPressChoice = dInitSet['ChoicePress'].keys()
-        # self.m_choice5.setItems(aPressChoice)
         for item in aPressChoice:
             self.m_choice5.Append(item)
+        aBookChoice = dInitSet['ChoiceBook'].keys()
+        for item in aBookChoice:
+            self.m_choice6.Append(item)
+        aUnitChoice = dInitSet['ChoiceUnit'].keys()
+        for item in aUnitChoice:
+            self.m_choice7.Append(item)
+        aLessonChoice = dInitSet['ChoiceLesson'].keys()
+        for item in aLessonChoice:
+            self.m_choice8.Append(item)
 
 
 class LisWriFram(listenwritewin.MyFrame1):
