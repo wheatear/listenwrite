@@ -56,7 +56,7 @@ class MyFrame1 ( wx.Frame ):
 		
 		# Cell Defaults
 		self.m_grid2.SetDefaultCellAlignment( wx.ALIGN_RIGHT, wx.ALIGN_TOP )
-		self.m_grid2.SetFont( wx.Font( 14, 70, 90, 90, False, "宋体" ) )
+		self.m_grid2.SetFont( wx.Font( 20, 70, 90, 90, False, "宋体" ) )
 		
 		bSizer3.Add( self.m_grid2, 0, wx.ALL, 5 )
 		
@@ -129,8 +129,6 @@ class MyFrame1 ( wx.Frame ):
 		self.SetMenuBar( self.m_menubar1 )
 		
 		
-		self.Centre( wx.BOTH )
-		
 		# Connect Events
 		self.m_button11.Bind( wx.EVT_BUTTON, self.loadWords )
 		self.m_button12.Bind( wx.EVT_BUTTON, self.startListen )
@@ -186,7 +184,7 @@ class MyDialog1 ( wx.Dialog ):
 		fgSizer3.SetFlexibleDirection( wx.BOTH )
 		fgSizer3.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.m_staticText7 = wx.StaticText( self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText7 = wx.StaticText( self, wx.ID_ANY, u"出版社", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText7.Wrap( -1 )
 		fgSizer3.Add( self.m_staticText7, 0, wx.ALL, 5 )
 		
@@ -195,7 +193,7 @@ class MyDialog1 ( wx.Dialog ):
 		self.m_choice5.SetSelection( 0 )
 		fgSizer3.Add( self.m_choice5, 0, wx.ALL, 5 )
 		
-		self.m_staticText8 = wx.StaticText( self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText8 = wx.StaticText( self, wx.ID_ANY, u"课本", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText8.Wrap( -1 )
 		fgSizer3.Add( self.m_staticText8, 0, wx.ALL, 5 )
 		
@@ -204,7 +202,7 @@ class MyDialog1 ( wx.Dialog ):
 		self.m_choice6.SetSelection( 0 )
 		fgSizer3.Add( self.m_choice6, 0, wx.ALL, 5 )
 		
-		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"单元", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText9.Wrap( -1 )
 		fgSizer3.Add( self.m_staticText9, 0, wx.ALL, 5 )
 		
@@ -213,7 +211,7 @@ class MyDialog1 ( wx.Dialog ):
 		self.m_choice7.SetSelection( 0 )
 		fgSizer3.Add( self.m_choice7, 0, wx.ALL, 5 )
 		
-		self.m_staticText10 = wx.StaticText( self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText10 = wx.StaticText( self, wx.ID_ANY, u"课文", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText10.Wrap( -1 )
 		fgSizer3.Add( self.m_staticText10, 0, wx.ALL, 5 )
 		
@@ -230,8 +228,32 @@ class MyDialog1 ( wx.Dialog ):
 		self.Layout()
 		
 		self.Centre( wx.BOTH )
+		
+		# Connect Events
+		self.m_choice5.Bind( wx.EVT_CHOICE, self.pressSelect )
+		self.m_choice6.Bind( wx.EVT_CHOICE, self.bossSelect )
+		self.m_choice7.Bind( wx.EVT_CHOICE, self.unitSelect )
+		self.m_choice8.Bind( wx.EVT_CHOICE, self.lessonSelect )
+		self.m_button9.Bind( wx.EVT_BUTTON, self.DoOk )
 	
 	def __del__( self ):
 		pass
+	
+	
+	# Virtual event handlers, overide them in your derived class
+	def pressSelect( self, event ):
+		event.Skip()
+	
+	def bossSelect( self, event ):
+		event.Skip()
+	
+	def unitSelect( self, event ):
+		event.Skip()
+	
+	def lessonSelect( self, event ):
+		event.Skip()
+	
+	def DoOk( self, event ):
+		event.Skip()
 	
 

@@ -119,7 +119,7 @@ class Player(object):
             return
         self.playing = 1
         startNum = self.playStart
-        listenGrp = self.app.listenWriter.wordesGroup
+        listenGrp = self.app.listenWriter.wordsGroup
         aPlayNums = range(len(listenGrp))[startNum:]
         for i in aPlayNums:
             listenWord = listenGrp[i]
@@ -232,6 +232,8 @@ class DbBuilder(Builder):
     dSql['ChoiceBook'] = 'select bookid,bookname,grade from lw_book where pressid=?'
     dSql['ChoiceUnit'] = 'select unitid,unitname from lw_unit where bookid=?'
     dSql['ChoiceLesson'] = 'select lessonid,lessoncode,lessonname from lw_lesson where unitid=?'
+
+    dSql['LessonWords'] = 'select word from lw_word where lessonId=?'
 
     def __init__(self, lstwrt):
         super(self.__class__, self).__init__(lstwrt)
@@ -364,17 +366,41 @@ class DbBuilder(Builder):
     def loadChoiceCommon(self, choiceKey, itemId):
         self.openDs()
         sql = self.dSql[choiceKey]
-        cur = self.db.prepareSql(sql)
+        # cur = self.db.prepareSql(sql)
+        conn = self.db.connectServer()
+        cur = conn.cursor()
         if itemId:
             self.db.executeCur(cur, sql, (itemId,))
         else:
             self.db.executeCur(cur, sql)
         rows = self.db.fetchall(cur)
+        cur.close()
+        conn.close()
         dict = {}
         for row in rows:
             key = ' '.join(row[1:])
             dict[key] = row[0]
         return dict
+
+    def loadLessonWords(self, lessonId):
+        self.prdGroup = []
+        self.loadPrdWordes()
+        self.lisnGroup = []
+        sql = self.dSql['LessonWords']
+        # cur = self.db.prepareSql(sql)
+        conn = self.db.connectServer()
+        cur = conn.cursor()
+        self.db.executeCur(cur, sql, (lessonId,))
+        rows = self.db.fetchall(cur)
+        cur.close()
+        conn.close()
+        aWords = []
+        for row in rows:
+            word = row[0]
+            # aWords.append(word)
+            lsnWord = ListenWord(word, self.listenWriter.listenSet, self.aipClient)
+            self.lisnGroup.append(lsnWord)
+        return self.lisnGroup
 
 
 class DbConn(object):
@@ -385,7 +411,8 @@ class DbConn(object):
         # self.connectServer()
 
     def connectServer(self):
-        if self.conn: return self.conn
+        # if self.conn: return self.conn
+        self.conn = None
         try:
             self.conn = sqlite3.connect(self.dbInfo)
         except Exception as e:
@@ -470,7 +497,7 @@ class ListenWrite(object):
 
     def __init__(self, app):
         self.app = app
-        self.wordesGroup = []
+        self.wordsGroup = []
         self.prdGroup = []
         self.presenteWords = []
         self.client = AipClient(ListenWrite.APP_ID, ListenWrite.API_KEY, ListenWrite.SECRET_KEY)
@@ -488,7 +515,7 @@ class ListenWrite(object):
     def loadWords(self):
         # self.listenGroup = self.builder.makeGroup()
         self.presenteWords = ['开始听写', '听写完毕']
-        self.wordesGroup = self.builder.loadWordes()
+        self.wordsGroup = self.builder.loadWordes()
 
     def vioceSet(self):
         # presenterSet
@@ -522,7 +549,7 @@ class ListenWrite(object):
         dChoiceSelected = {'press':'人民教育出版社'}
         dChoiceSelected['book'] = '语文 四年级下'
         dChoiceSelected['unit'] = '五单元'
-        dChoiceSelected['lesson'] = '20 乡下人家'
+        dChoiceSelected['lesson'] = '19 花的勇气'
         dInitSet['ChoiceSelected'] = dChoiceSelected
 
         dChoicePress = self.builder.loadChoiceCommon('ChoicePress', None)
@@ -540,6 +567,28 @@ class ListenWrite(object):
         dChoiceLesson = self.builder.loadChoiceCommon('ChoiceLesson', unitId)
         dInitSet['ChoiceLesson'] = dChoiceLesson
         self.dInitSet = dInitSet
+
+    def loadBook(self, pressId):
+        dChoiceBook = self.builder.loadChoiceCommon('ChoiceBook', pressId)
+        self.dInitSet['ChoiceBook'] = dChoiceBook
+        self.dInitSet['ChoiceSelected']['book'] = None
+        return dChoiceBook
+
+    def loadUnit(self, bookId):
+        dChoiceUnit = self.builder.loadChoiceCommon('ChoiceUnit', bookId)
+        self.dInitSet['ChoiceUnit'] = dChoiceUnit
+        self.dInitSet['ChoiceSelected']['unit'] = None
+        return dChoiceUnit
+
+    def loadLesson(self, unitId):
+        dChoiceLesson = self.builder.loadChoiceCommon('ChoiceLesson', unitId)
+        self.dInitSet['ChoiceLesson'] = dChoiceLesson
+        self.dInitSet['ChoiceSelected']['lesson'] = None
+        return dChoiceLesson
+
+    def loadWordsByLesson(self, lessonId):
+        self.presenteWords = ['开始听写', '听写完毕']
+        self.wordsGroup = self.builder.loadLessonWords(lessonId)
 
 
 # class Application(Frame):
@@ -695,6 +744,7 @@ class ListenWrite(object):
 class WordChoice(listenwritewin.MyDialog1):
     def __init__(self, parent):
         super(self.__class__, self).__init__(parent)
+        self.listenWriter = parent.listenWriter
         self.pressChoice = {}
         self.bookChoice = {}
         self.unitChoice = {}
@@ -702,19 +752,98 @@ class WordChoice(listenwritewin.MyDialog1):
         self.choiceSelected = {}
 
     def setInit(self, dInitSet):
-        aPressChoice = dInitSet['ChoicePress'].keys()
-        for item in aPressChoice:
-            self.m_choice5.Append(item)
-        aBookChoice = dInitSet['ChoiceBook'].keys()
-        for item in aBookChoice:
-            self.m_choice6.Append(item)
-        aUnitChoice = dInitSet['ChoiceUnit'].keys()
-        for item in aUnitChoice:
-            self.m_choice7.Append(item)
-        aLessonChoice = dInitSet['ChoiceLesson'].keys()
-        for item in aLessonChoice:
-            self.m_choice8.Append(item)
+        self.choiceSelected = dInitSet['ChoiceSelected']
+        self.pressChoice = dInitSet['ChoicePress']
+        self.bookChoice = dInitSet['ChoiceBook']
+        self.unitChoice = dInitSet['ChoiceUnit']
+        self.lessonChoice = dInitSet['ChoiceLesson']
 
+        aPressChoice = dInitSet['ChoicePress'].keys()
+        for i,item in enumerate(aPressChoice):
+            self.m_choice5.Append(item)
+            if item == self.choiceSelected['press']:
+                self.m_choice5.SetSelection(i)
+
+        aBookChoice = dInitSet['ChoiceBook'].keys()
+        for i,item in enumerate(aBookChoice):
+            self.m_choice6.Append(item)
+            if item == self.choiceSelected['book']:
+                self.m_choice6.SetSelection(i)
+
+        aUnitChoice = dInitSet['ChoiceUnit'].keys()
+        for i,item in enumerate(aUnitChoice):
+            self.m_choice7.Append(item)
+            if item == self.choiceSelected['unit']:
+                self.m_choice7.SetSelection(i)
+
+        aLessonChoice = dInitSet['ChoiceLesson'].keys()
+        for i,item in enumerate(aLessonChoice):
+            self.m_choice8.Append(item)
+            if item == self.choiceSelected['lesson']:
+                self.m_choice8.SetSelection(i)
+        lessonId = self.lessonChoice[self.choiceSelected['lesson']]
+        self.listenWriter.loadWordsByLesson(lessonId)
+        t = threading.Thread(target=self.listenWriter.makeVoice)
+        t.setDaemon(True)
+        t.start()
+
+    def pressSelect(self, event):
+        press = self.m_choice5.GetStringSelection()
+        if press == self.choiceSelected['press']:
+            return
+        self.choiceSelected['press'] = press
+        pressId = self.pressChoice[press]
+        self.bookChoice = self.listerWriter.loadBook(pressId)
+        self.choiceSelected['book'] = None
+        self.m_choice6.Clear()
+        for item in self.bookChoice.keys():
+            self.m_choice6.append(item)
+        self.unitChoice = {}
+        self.choiceSelected['unit'] = None
+        self.m_choice7.Clear()
+        self.lessonChoice = {}
+        self.choiceSelected['lesson'] = None
+        self.m_choice8.Clear()
+
+    def bookSelect(self, event):
+        book = self.m_choice6.GetStringSelection()
+        if book == self.choiceSelected['book']:
+            return
+        self.choiceSelected['book'] = book
+        bookId = self.bookChoice[book]
+        self.unitChoice = self.listenWriter.loadUnit(bookId)
+        self.choiceSelected['unit'] = None
+        self.m_choice7.Clear()
+        for item in self.unitChoice.keys():
+            self.m_choice7.append(item)
+        self.lessonChoice = {}
+        self.choiceSelected['lesson'] = None
+        self.m_choice8.Clear()
+
+    def unitSelect(self, event):
+        unit = self.m_choice7.GetStringSelection()
+        if unit == self.choiceSelected['unit']:
+            return
+        self.choiceSelected['unit'] = unit
+        unitId = self.unitChoice[unit]
+        self.lessonChoice = self.listenWriter.loadLesson(unitId)
+        self.m_choice8.Clear()
+        for item in self.lessonChoice.keys():
+            self.m_choice8.append(item)
+
+    def lessonSelect(self, event):
+        lesson = self.m_choice8.GetStringSelection()
+        if lesson == self.choiceSelected['lesson']:
+            return
+        self.choiceSelected['lesson'] = lesson
+        lessonId = self.lessonChoice[lesson]
+        self.listenWriter.loadWordsByLesson(lessonId)
+        t = threading.Thread(target=self.listenWriter.makeVoice)
+        t.setDaemon(True)
+        t.start()
+
+    def DoOk(self, event):
+        self.EndModal(0)
 
 class LisWriFram(listenwritewin.MyFrame1):
     def __init__(self, parent):
@@ -746,8 +875,8 @@ class LisWriFram(listenwritewin.MyFrame1):
     def startListen(self, event):
         # name = self.nameInput.get() or 'world'
         # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
-        if self.loaded == 0:
-            self.loadWords(None)
+        # if self.loaded == 0:
+        #     self.loadWords(None)
         self.refreshCount()
         t = threading.Thread(target=self.listenWriter.playWordes)
         t.setDaemon(True)
