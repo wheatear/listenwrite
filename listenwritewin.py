@@ -47,6 +47,7 @@ class MyFrame1 ( wx.Frame ):
 		self.m_grid2.SetColLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
 		
 		# Rows
+		self.m_grid2.SetRowSize( 0, 30 )
 		self.m_grid2.AutoSizeRows()
 		self.m_grid2.EnableDragRowSize( False )
 		self.m_grid2.SetRowLabelSize( 30 )
@@ -77,7 +78,7 @@ class MyFrame1 ( wx.Frame ):
 		
 		bSizer6 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.m_button11 = wx.Button( self, wx.ID_ANY, u"加载词语", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button11 = wx.Button( self, wx.ID_ANY, u"显示词语", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer6.Add( self.m_button11, 0, wx.ALL, 5 )
 		
 		self.m_button12 = wx.Button( self, wx.ID_ANY, u"开始听写", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -130,13 +131,13 @@ class MyFrame1 ( wx.Frame ):
 		
 		
 		# Connect Events
-		self.m_button11.Bind( wx.EVT_BUTTON, self.loadWords )
+		self.m_button11.Bind( wx.EVT_BUTTON, self.displayWords )
 		self.m_button12.Bind( wx.EVT_BUTTON, self.startListen )
 		self.m_button13.Bind( wx.EVT_BUTTON, self.nextWord )
 		self.m_button14.Bind( wx.EVT_BUTTON, self.pause )
 		self.m_button15.Bind( wx.EVT_BUTTON, self.playContinue )
 		self.m_button6.Bind( wx.EVT_BUTTON, self.help )
-		self.Bind( wx.EVT_MENU, self.loadFromFile, id = self.m_menuItem1.GetId() )
+		self.Bind( wx.EVT_MENU, self.importWords, id = self.m_menuItem1.GetId() )
 		self.Bind( wx.EVT_MENU, self.toListen, id = self.m_menuItem2.GetId() )
 	
 	def __del__( self ):
@@ -144,7 +145,7 @@ class MyFrame1 ( wx.Frame ):
 	
 	
 	# Virtual event handlers, overide them in your derived class
-	def loadWords( self, event ):
+	def displayWords( self, event ):
 		event.Skip()
 	
 	def startListen( self, event ):
@@ -162,7 +163,7 @@ class MyFrame1 ( wx.Frame ):
 	def help( self, event ):
 		event.Skip()
 	
-	def loadFromFile( self, event ):
+	def importWords( self, event ):
 		event.Skip()
 	
 	def toListen( self, event ):
@@ -231,7 +232,7 @@ class MyDialog1 ( wx.Dialog ):
 		
 		# Connect Events
 		self.m_choice5.Bind( wx.EVT_CHOICE, self.pressSelect )
-		self.m_choice6.Bind( wx.EVT_CHOICE, self.bossSelect )
+		self.m_choice6.Bind( wx.EVT_CHOICE, self.bookSelect )
 		self.m_choice7.Bind( wx.EVT_CHOICE, self.unitSelect )
 		self.m_choice8.Bind( wx.EVT_CHOICE, self.lessonSelect )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.DoOk )
@@ -244,7 +245,7 @@ class MyDialog1 ( wx.Dialog ):
 	def pressSelect( self, event ):
 		event.Skip()
 	
-	def bossSelect( self, event ):
+	def bookSelect( self, event ):
 		event.Skip()
 	
 	def unitSelect( self, event ):

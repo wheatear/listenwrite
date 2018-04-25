@@ -18,7 +18,7 @@ executables = [
 # , icon='icon.ico'
 
 setup(name='listenwrite',
-      version = '3.0',
+      version = '3.1',
       description = 'listen and write tools',
       options = dict(build_exe = buildOptions),
       executables = executables)

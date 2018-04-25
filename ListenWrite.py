@@ -105,6 +105,9 @@ class Player(object):
 
     def playAll(self):
         self.playStart = 0
+        self.pause = 0
+        self.playing = 0
+        self.repeatNum = 1
         self.playOne(self.app.listenWriter.builder.prdGroup[0])
         if self.playGroup():
             self.playOne(self.app.listenWriter.builder.prdGroup[1])
@@ -516,6 +519,9 @@ class ListenWrite(object):
         # self.listenGroup = self.builder.makeGroup()
         self.presenteWords = ['开始听写', '听写完毕']
         self.wordsGroup = self.builder.loadWordes()
+        t = threading.Thread(target=self.makeVoice)
+        t.setDaemon(True)
+        t.start()
 
     def vioceSet(self):
         # presenterSet
@@ -534,9 +540,15 @@ class ListenWrite(object):
 
     def playWordes(self):
         self.player.playAll()
+        self.app.m_button11.Enable(True)
+        self.app.m_button12.Enable(True)
+        self.app.m_button15.Enable(True)
 
     def playContinue(self):
         self.player.playContinue()
+        self.app.m_button11.Enable(True)
+        self.app.m_button12.Enable(True)
+        self.app.m_button15.Enable(True)
 
     def pause(self):
         self.player.pause = 1
@@ -589,6 +601,9 @@ class ListenWrite(object):
     def loadWordsByLesson(self, lessonId):
         self.presenteWords = ['开始听写', '听写完毕']
         self.wordsGroup = self.builder.loadLessonWords(lessonId)
+        t = threading.Thread(target=self.makeVoice)
+        t.setDaemon(True)
+        t.start()
 
 
 # class Application(Frame):
@@ -750,6 +765,7 @@ class WordChoice(listenwritewin.MyDialog1):
         self.unitChoice = {}
         self.lessonChoice = {}
         self.choiceSelected = {}
+        self.lessonId = None
 
     def setInit(self, dInitSet):
         self.choiceSelected = dInitSet['ChoiceSelected']
@@ -781,11 +797,8 @@ class WordChoice(listenwritewin.MyDialog1):
             self.m_choice8.Append(item)
             if item == self.choiceSelected['lesson']:
                 self.m_choice8.SetSelection(i)
-        lessonId = self.lessonChoice[self.choiceSelected['lesson']]
-        self.listenWriter.loadWordsByLesson(lessonId)
-        t = threading.Thread(target=self.listenWriter.makeVoice)
-        t.setDaemon(True)
-        t.start()
+        self.lessonId = self.lessonChoice[self.choiceSelected['lesson']]
+        self.listenWriter.loadWordsByLesson(self.lessonId)
 
     def pressSelect(self, event):
         press = self.m_choice5.GetStringSelection()
@@ -793,11 +806,12 @@ class WordChoice(listenwritewin.MyDialog1):
             return
         self.choiceSelected['press'] = press
         pressId = self.pressChoice[press]
-        self.bookChoice = self.listerWriter.loadBook(pressId)
+        self.bookChoice = self.listenWriter.loadBook(pressId)
+        # self.listenWriter.loadBook(pressId)
         self.choiceSelected['book'] = None
         self.m_choice6.Clear()
         for item in self.bookChoice.keys():
-            self.m_choice6.append(item)
+            self.m_choice6.Append(item)
         self.unitChoice = {}
         self.choiceSelected['unit'] = None
         self.m_choice7.Clear()
@@ -815,7 +829,7 @@ class WordChoice(listenwritewin.MyDialog1):
         self.choiceSelected['unit'] = None
         self.m_choice7.Clear()
         for item in self.unitChoice.keys():
-            self.m_choice7.append(item)
+            self.m_choice7.Append(item)
         self.lessonChoice = {}
         self.choiceSelected['lesson'] = None
         self.m_choice8.Clear()
@@ -829,20 +843,18 @@ class WordChoice(listenwritewin.MyDialog1):
         self.lessonChoice = self.listenWriter.loadLesson(unitId)
         self.m_choice8.Clear()
         for item in self.lessonChoice.keys():
-            self.m_choice8.append(item)
+            self.m_choice8.Append(item)
 
     def lessonSelect(self, event):
         lesson = self.m_choice8.GetStringSelection()
         if lesson == self.choiceSelected['lesson']:
             return
         self.choiceSelected['lesson'] = lesson
-        lessonId = self.lessonChoice[lesson]
-        self.listenWriter.loadWordsByLesson(lessonId)
-        t = threading.Thread(target=self.listenWriter.makeVoice)
-        t.setDaemon(True)
-        t.start()
+        self.lessonId = self.lessonChoice[lesson]
 
     def DoOk(self, event):
+        self.listenWriter.dInitSet['ChoiceSelected'] = self.choiceSelected
+        self.listenWriter.loadWordsByLesson(self.lessonId)
         self.EndModal(0)
 
 class LisWriFram(listenwritewin.MyFrame1):
@@ -861,14 +873,9 @@ class LisWriFram(listenwritewin.MyFrame1):
         t.start()
 
     def loadWords(self, event):
-        # self.listenWriter = ListenWrite(self)
-        # self.listenWriter.setDaemon(True)
         self.loaded = 1
         self.listenWriter.loadWords()
         self.loaded = 9
-        t = threading.Thread(target=self.listenWriter.makeVoice)
-        t.setDaemon(True)
-        t.start()
         # t.join()
         # self.loaded = 9
 
@@ -877,6 +884,10 @@ class LisWriFram(listenwritewin.MyFrame1):
         # tkMessageBox.showinfo('Message', 'Hello, %s' % name)
         # if self.loaded == 0:
         #     self.loadWords(None)
+        self.m_button11.Enable(False)
+        self.m_button12.Enable(False)
+        self.m_button15.Enable(False)
+        self.m_button14.Enable(True)
         self.refreshCount()
         t = threading.Thread(target=self.listenWriter.playWordes)
         t.setDaemon(True)
@@ -887,14 +898,20 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.listenWriter.player.nextOne = 1
 
     def pause(self,event):
+        self.m_button12.Enable(True)
+        self.m_button15.Enable(True)
         self.listenWriter.pause()
 
     def playContinue(self, event):
+        self.m_button11.Enable(False)
+        self.m_button12.Enable(False)
+        self.m_button15.Enable(False)
+        self.m_button14.Enable(True)
         t = threading.Thread(target=self.listenWriter.playContinue)
         t.setDaemon(True)
         t.start()
 
-    def loadFromFile(self, event):
+    def importWords(self, event):
         wildcard = "Text Files (*.txt)|*.txt"
         dlg = wx.FileDialog(self, "选择词语文件", os.getcwd(), "", wildcard, wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
@@ -911,11 +928,21 @@ class LisWriFram(listenwritewin.MyFrame1):
         selectForm.setInit(self.listenWriter.dInitSet)
         selectForm.ShowModal()
 
+    def displayWords(self, event):
+        self.wordCount = 0
+        aWords = self.listenWriter.wordsGroup
+        for i,word in enumerate(aWords):
+            row = i // 6
+            col = i % 6
+            self.m_grid2.SetCellValue(row, col, word.word)
+
     def refreshCount(self):
-        if self.wordCount == 0:
-            return
-        row = self.wordCount // 6
-        self.wordCount = (row + 1) * 6
+        # if self.wordCount == 0:
+        #     return
+        self.m_grid2.ClearGrid()
+        self.wordCount = 0
+        # row = self.wordCount // 6
+        # self.wordCount = (row + 1) * 6
 
     def displayPinyin(self, pinyin):
         str = ''

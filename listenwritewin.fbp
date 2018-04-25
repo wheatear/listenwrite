@@ -169,7 +169,7 @@
                         <property name="row_label_size">30</property>
                         <property name="row_label_values"></property>
                         <property name="row_label_vert_alignment">wxALIGN_CENTRE</property>
-                        <property name="row_sizes"></property>
+                        <property name="row_sizes">30</property>
                         <property name="rows">10</property>
                         <property name="show">1</property>
                         <property name="size"></property>
@@ -455,7 +455,7 @@
                                 <property name="gripper">0</property>
                                 <property name="hidden">0</property>
                                 <property name="id">wxID_ANY</property>
-                                <property name="label">加载词语</property>
+                                <property name="label">显示词语</property>
                                 <property name="max_size"></property>
                                 <property name="maximize_button">0</property>
                                 <property name="maximum_size"></property>
@@ -484,7 +484,7 @@
                                 <property name="window_extra_style"></property>
                                 <property name="window_name"></property>
                                 <property name="window_style"></property>
-                                <event name="OnButtonClick">loadWords</event>
+                                <event name="OnButtonClick">displayWords</event>
                                 <event name="OnChar"></event>
                                 <event name="OnEnterWindow"></event>
                                 <event name="OnEraseBackground"></event>
@@ -1014,7 +1014,7 @@
                         <property name="permission">none</property>
                         <property name="shortcut"></property>
                         <property name="unchecked_bitmap"></property>
-                        <event name="OnMenuSelection">loadFromFile</event>
+                        <event name="OnMenuSelection">importWords</event>
                         <event name="OnUpdateUI"></event>
                     </object>
                 </object>
@@ -1471,7 +1471,7 @@
                         <property name="window_name"></property>
                         <property name="window_style"></property>
                         <event name="OnChar"></event>
-                        <event name="OnChoice">bossSelect</event>
+                        <event name="OnChoice">bookSelect</event>
                         <event name="OnEnterWindow"></event>
                         <event name="OnEraseBackground"></event>
                         <event name="OnKeyDown"></event>
