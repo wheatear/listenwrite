@@ -18,19 +18,20 @@ import wx.grid
 class MyFrame1 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"词语听写", pos = wx.DefaultPosition, size = wx.Size( 1145,426 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"词语听写", pos = wx.DefaultPosition, size = wx.Size( 1130,559 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
-		self.SetFont( wx.Font( 14, 70, 90, 90, False, "宋体" ) )
+		self.SetFont( wx.Font( 20, 70, 90, 90, False, "宋体" ) )
 		
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
 		
-		self.m_grid2 = wx.grid.Grid( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_grid2 = wx.grid.Grid( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.VSCROLL )
 		
 		# Grid
 		self.m_grid2.CreateGrid( 10, 6 )
 		self.m_grid2.EnableEditing( False )
 		self.m_grid2.EnableGridLines( True )
+		self.m_grid2.SetGridLineColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOWFRAME ) )
 		self.m_grid2.EnableDragGridSize( False )
 		self.m_grid2.SetMargins( 0, 0 )
 		
@@ -47,16 +48,24 @@ class MyFrame1 ( wx.Frame ):
 		self.m_grid2.SetColLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
 		
 		# Rows
-		self.m_grid2.SetRowSize( 0, 30 )
-		self.m_grid2.AutoSizeRows()
-		self.m_grid2.EnableDragRowSize( False )
+		self.m_grid2.SetRowSize( 0, 35 )
+		self.m_grid2.SetRowSize( 1, 35 )
+		self.m_grid2.SetRowSize( 2, 35 )
+		self.m_grid2.SetRowSize( 3, 35 )
+		self.m_grid2.SetRowSize( 4, 35 )
+		self.m_grid2.SetRowSize( 5, 35 )
+		self.m_grid2.SetRowSize( 6, 35 )
+		self.m_grid2.SetRowSize( 7, 35 )
+		self.m_grid2.SetRowSize( 8, 35 )
+		self.m_grid2.SetRowSize( 9, 35 )
+		self.m_grid2.EnableDragRowSize( True )
 		self.m_grid2.SetRowLabelSize( 30 )
 		self.m_grid2.SetRowLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
 		
 		# Label Appearance
 		
 		# Cell Defaults
-		self.m_grid2.SetDefaultCellAlignment( wx.ALIGN_RIGHT, wx.ALIGN_TOP )
+		self.m_grid2.SetDefaultCellAlignment( wx.ALIGN_CENTRE, wx.ALIGN_TOP )
 		self.m_grid2.SetFont( wx.Font( 20, 70, 90, 90, False, "宋体" ) )
 		
 		bSizer3.Add( self.m_grid2, 0, wx.ALL, 5 )
@@ -79,6 +88,8 @@ class MyFrame1 ( wx.Frame ):
 		bSizer6 = wx.BoxSizer( wx.HORIZONTAL )
 		
 		self.m_button11 = wx.Button( self, wx.ID_ANY, u"显示词语", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button11.SetFont( wx.Font( 20, 70, 90, 90, False, wx.EmptyString ) )
+		
 		bSizer6.Add( self.m_button11, 0, wx.ALL, 5 )
 		
 		self.m_button12 = wx.Button( self, wx.ID_ANY, u"开始听写", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -93,8 +104,11 @@ class MyFrame1 ( wx.Frame ):
 		self.m_button15 = wx.Button( self, wx.ID_ANY, u"继续", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer6.Add( self.m_button15, 0, wx.ALL, 5 )
 		
-		self.m_button6 = wx.Button( self, wx.ID_ANY, u"帮助", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button6 = wx.Button( self, wx.ID_ANY, u"标记错词", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer6.Add( self.m_button6, 0, wx.ALL, 5 )
+		
+		self.m_button8 = wx.Button( self, wx.ID_ANY, u"保存错词", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer6.Add( self.m_button8, 0, wx.ALL, 5 )
 		
 		
 		bSizer3.Add( bSizer6, 1, wx.EXPAND, 5 )
@@ -103,6 +117,8 @@ class MyFrame1 ( wx.Frame ):
 		self.SetSizer( bSizer3 )
 		self.Layout()
 		self.m_menubar1 = wx.MenuBar( 0 )
+		self.m_menubar1.SetFont( wx.Font( 20, 70, 90, 90, False, wx.EmptyString ) )
+		
 		self.m_menu1 = wx.Menu()
 		self.m_menuItem1 = wx.MenuItem( self.m_menu1, wx.ID_ANY, u"导入词语", wx.EmptyString, wx.ITEM_NORMAL )
 		self.m_menu1.AppendItem( self.m_menuItem1 )
@@ -131,12 +147,14 @@ class MyFrame1 ( wx.Frame ):
 		
 		
 		# Connect Events
+		self.m_grid2.Bind( wx.grid.EVT_GRID_SELECT_CELL, self.remarkCell )
 		self.m_button11.Bind( wx.EVT_BUTTON, self.displayWords )
 		self.m_button12.Bind( wx.EVT_BUTTON, self.startListen )
 		self.m_button13.Bind( wx.EVT_BUTTON, self.nextWord )
 		self.m_button14.Bind( wx.EVT_BUTTON, self.pause )
 		self.m_button15.Bind( wx.EVT_BUTTON, self.playContinue )
-		self.m_button6.Bind( wx.EVT_BUTTON, self.help )
+		self.m_button6.Bind( wx.EVT_BUTTON, self.remarkError )
+		self.m_button8.Bind( wx.EVT_BUTTON, self.saveError )
 		self.Bind( wx.EVT_MENU, self.importWords, id = self.m_menuItem1.GetId() )
 		self.Bind( wx.EVT_MENU, self.toListen, id = self.m_menuItem2.GetId() )
 	
@@ -145,6 +163,9 @@ class MyFrame1 ( wx.Frame ):
 	
 	
 	# Virtual event handlers, overide them in your derived class
+	def remarkCell( self, event ):
+		event.Skip()
+	
 	def displayWords( self, event ):
 		event.Skip()
 	
@@ -160,7 +181,10 @@ class MyFrame1 ( wx.Frame ):
 	def playContinue( self, event ):
 		event.Skip()
 	
-	def help( self, event ):
+	def remarkError( self, event ):
+		event.Skip()
+	
+	def saveError( self, event ):
 		event.Skip()
 	
 	def importWords( self, event ):

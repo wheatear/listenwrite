@@ -111,11 +111,15 @@ class Player(object):
         self.playOne(self.app.listenWriter.builder.prdGroup[0])
         if self.playGroup():
             self.playOne(self.app.listenWriter.builder.prdGroup[1])
+            return True
+        return False
 
     def playContinue(self):
         self.pause = 0
         if self.playGroup():
             self.playOne(self.app.listenWriter.builder.prdGroup[1])
+            return True
+        return False
 
     def playGroup(self):
         if self.playing == 1:
@@ -481,7 +485,7 @@ class DbConn(object):
     def executeCur(self, cur, sql, params=None):
         # logging.info('execute cur %s', cur.statement)
         # try:
-        print('sql: %s . para: %s' % (sql, params))
+        # print('sql: %s . para: %s' % (sql, params))
         if params is None:
                 cur.execute(sql)
         else:
@@ -539,22 +543,23 @@ class ListenWrite(object):
         self.builder.makeAllVoice()
 
     def playWordes(self):
-        self.player.playAll()
-        self.app.m_button11.Enable(True)
-        self.app.m_button12.Enable(True)
-        self.app.m_button15.Enable(True)
+        if self.player.playAll():
+            self.app.m_button11.Enable(True)
+            self.app.m_button12.Enable(True)
+            self.app.m_button15.Enable(True)
 
     def playContinue(self):
-        self.player.playContinue()
-        self.app.m_button11.Enable(True)
-        self.app.m_button12.Enable(True)
-        self.app.m_button15.Enable(True)
+        if self.player.playContinue():
+            self.app.m_button11.Enable(True)
+            self.app.m_button12.Enable(True)
+            self.app.m_button15.Enable(True)
 
     def pause(self):
         self.player.pause = 1
 
     def importWords(self, file):
         self.builder.importWords(file)
+        self.app.m_button11.Enable(False)
 
     def loadInit(self):
         dInitSet = {}
@@ -579,6 +584,8 @@ class ListenWrite(object):
         dChoiceLesson = self.builder.loadChoiceCommon('ChoiceLesson', unitId)
         dInitSet['ChoiceLesson'] = dChoiceLesson
         self.dInitSet = dInitSet
+        lessonId = dChoiceLesson[dChoiceSelected['lesson']]
+        self.loadWordsByLesson(lessonId)
 
     def loadBook(self, pressId):
         dChoiceBook = self.builder.loadChoiceCommon('ChoiceBook', pressId)
@@ -768,11 +775,15 @@ class WordChoice(listenwritewin.MyDialog1):
         self.lessonId = None
 
     def setInit(self, dInitSet):
-        self.choiceSelected = dInitSet['ChoiceSelected']
-        self.pressChoice = dInitSet['ChoicePress']
-        self.bookChoice = dInitSet['ChoiceBook']
-        self.unitChoice = dInitSet['ChoiceUnit']
-        self.lessonChoice = dInitSet['ChoiceLesson']
+        try:
+            self.choiceSelected = dInitSet['ChoiceSelected']
+            self.pressChoice = dInitSet['ChoicePress']
+            self.bookChoice = dInitSet['ChoiceBook']
+            self.unitChoice = dInitSet['ChoiceUnit']
+            self.lessonChoice = dInitSet['ChoiceLesson']
+        except Exception as e:
+            msg = '%s: %s' % (e.__class__, str(e))
+            wx.MessageBox(msg, '异常', wx.OK | wx.ICON_INFORMATION)
 
         aPressChoice = dInitSet['ChoicePress'].keys()
         for i,item in enumerate(aPressChoice):
@@ -857,6 +868,7 @@ class WordChoice(listenwritewin.MyDialog1):
         self.listenWriter.loadWordsByLesson(self.lessonId)
         self.EndModal(0)
 
+
 class LisWriFram(listenwritewin.MyFrame1):
     def __init__(self, parent):
         super(self.__class__, self).__init__(parent)
@@ -866,11 +878,10 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.loaded = 0
         self.loadInitSet()
         # self.nextOne = 0
+        self.remarking = 0
 
     def loadInitSet(self):
-        t = threading.Thread(target=self.listenWriter.loadInit)
-        t.setDaemon(True)
-        t.start()
+        self.listenWriter.loadInit()
 
     def loadWords(self, event):
         self.loaded = 1
@@ -898,6 +909,7 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.listenWriter.player.nextOne = 1
 
     def pause(self,event):
+        self.m_button11.Enable(False)
         self.m_button12.Enable(True)
         self.m_button15.Enable(True)
         self.listenWriter.pause()
@@ -924,9 +936,17 @@ class LisWriFram(listenwritewin.MyFrame1):
         dlg.Destroy()
 
     def toListen(self, event):
-        selectForm = WordChoice(self)
-        selectForm.setInit(self.listenWriter.dInitSet)
-        selectForm.ShowModal()
+        try:
+            selectForm = WordChoice(self)
+            selectForm.setInit(self.listenWriter.dInitSet)
+            selectForm.ShowModal()
+            self.m_button11.Enable(True)
+        except Exception as e:
+            msg = '%s: %s' % (e.__class__, str(e))
+            wx.MessageBox(msg, 'exception', wx.OK | wx.ICON_INFORMATION)
+
+    def errorListen(self, event):
+        wx.MessageBox("听写错词。。。", '听写', wx.OK | wx.ICON_INFORMATION)
 
     def displayWords(self, event):
         self.wordCount = 0
@@ -957,6 +977,20 @@ class LisWriFram(listenwritewin.MyFrame1):
         col = self.wordCount % 6
         self.m_grid2.SetCellValue(row, col, str)
         self.wordCount += 1
+
+    def remarkError(self, event):
+        wx.MessageBox(str(dir(event)), '选择词语', wx.OK | wx.ICON_INFORMATION)
+        self.remarking = 1
+
+    def saveError(self, event):
+        self.remarking = 0
+        event.Skip()
+
+    def remarkCell(self, event):
+        if self.remarking == 0:
+            return
+        event.GetString()
+        wx.MessageBox(event.GetString(), '选择词语', wx.OK | wx.ICON_INFORMATION)
 
 
 # start
