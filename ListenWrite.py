@@ -986,11 +986,22 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.remarking = 0
         event.Skip()
 
-    def remarkCell(self, event):
-        if self.remarking == 0:
-            return
-        event.GetString()
-        wx.MessageBox(event.GetString(), '选择词语', wx.OK | wx.ICON_INFORMATION)
+    def remarkCell(self, evt):
+        # if self.remarking == 0:
+        #     return
+        if evt.Selecting():
+            msg = 'Selected'
+        else:
+            msg = 'Deselected'
+        wx.MessageBox("OnSelectCell: %s (%d,%d) %s\n" %
+                       (msg, evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+
+        # Another way to stay in a cell that has a bad value...
+        row = self.m_grid2.GetGridCursorRow()
+        col = self.m_grid2.GetGridCursorCol()
+
+        # event.GetString()
+        # wx.MessageBox(event.GetString(), '选择词语', wx.OK | wx.ICON_INFORMATION)
 
 
 # start

@@ -1107,7 +1107,7 @@
                     </object>
                 </object>
                 <object class="wxMenu" expanded="1">
-                    <property name="label">听写</property>
+                    <property name="label">词语</property>
                     <property name="name">m_menu2</property>
                     <property name="permission">protected</property>
                     <object class="wxMenuItem" expanded="1">
@@ -1117,7 +1117,7 @@
                         <property name="help"></property>
                         <property name="id">wxID_ANY</property>
                         <property name="kind">wxITEM_NORMAL</property>
-                        <property name="label">听写生词</property>
+                        <property name="label">生词</property>
                         <property name="name">m_menuItem2</property>
                         <property name="permission">none</property>
                         <property name="shortcut"></property>
@@ -1132,7 +1132,7 @@
                         <property name="help"></property>
                         <property name="id">wxID_ANY</property>
                         <property name="kind">wxITEM_NORMAL</property>
-                        <property name="label">听写错词</property>
+                        <property name="label">错词</property>
                         <property name="name">m_menuItem3</property>
                         <property name="permission">none</property>
                         <property name="shortcut"></property>

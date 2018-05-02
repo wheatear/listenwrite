@@ -126,13 +126,13 @@ class MyFrame1 ( wx.Frame ):
 		self.m_menubar1.Append( self.m_menu1, u"文件" ) 
 		
 		self.m_menu2 = wx.Menu()
-		self.m_menuItem2 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"听写生词", wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menuItem2 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"生词", wx.EmptyString, wx.ITEM_NORMAL )
 		self.m_menu2.AppendItem( self.m_menuItem2 )
 		
-		self.m_menuItem3 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"听写错词", wx.EmptyString, wx.ITEM_NORMAL )
+		self.m_menuItem3 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"错词", wx.EmptyString, wx.ITEM_NORMAL )
 		self.m_menu2.AppendItem( self.m_menuItem3 )
 		
-		self.m_menubar1.Append( self.m_menu2, u"听写" ) 
+		self.m_menubar1.Append( self.m_menu2, u"词语" ) 
 		
 		self.m_menu3 = wx.Menu()
 		self.m_menubar1.Append( self.m_menu3, u"选项" ) 
