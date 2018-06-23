@@ -12,6 +12,7 @@
 
 from aip import AipSpeech
 import mp3play, time
+import datetime
 import os
 import re
 import sqlite3
@@ -66,6 +67,7 @@ class ListenWord(object):
         self.aipClient = aipClient
         # self.sleepSeconds = len(word) / 3 * 2
         self.sleepSeconds = len(word) * 2
+        self.testResult = 0
         # self.wordKey = word.decode('utf-8').encode('unicode_escape').replace('\\u','')
         self.wordKey = word.encode('unicode_escape').replace(b'\\u',b'').decode()
         self.makePinyin()
@@ -240,6 +242,13 @@ class DbBuilder(Builder):
     dSql['ChoiceUnit'] = 'select unitid,unitname from lw_unit where bookid=?'
     dSql['ChoiceLesson'] = 'select lessonid,lessoncode,lessonname from lw_lesson where unitid=?'
 
+    dSql['SearchTest'] = 'select testid from lw_test where testtime=? and testname=? and type=? and pressid=? and bookid=? and unitid=? and lessonid=?'
+    dSql['InsertTest'] = "insert into lw_test(testtime,testname,type,pressid,bookid,unitid,lessonid) values(?,?,?,?,?,?,?)"
+    dSql['SearchTestWord'] = "select result from lw_testwords where testid=? and word=?"
+    dSql['InsertTestWord'] = "insert into lw_testwords(result,testid,word) values(?,?,?)"
+    dSql['UpdateTestWord'] = "update lw_testwords set result=? where testid=? and word=?"
+    dSql['TestWords'] = "select word from lw_testwords where testid=? and result=?"
+
     dSql['LessonWords'] = 'select word from lw_word where lessonId=?'
 
     def __init__(self, lstwrt):
@@ -283,6 +292,63 @@ class DbBuilder(Builder):
             else:
                 self.importWord(line, lessonId)
         fp.close()
+
+    def insertResult(self, testId, word, result):
+        sqlSearch = self.dSql['SearchTestWord']
+        sqlSave = self.dSql['InsertTestWord']
+        curSearch = self.db.prepareSql(sqlSearch)
+        self.db.executeCur(curSearch, sqlSearch, (testId, word))
+        row = self.db.fetchone(curSearch)
+        if row:
+            if row[0] == result:
+                return
+            else:
+                sqlSave = self.dSql['UpdateTestWord']
+
+        curSave = self.db.prepareSql(sqlSave)
+        self.db.executeCur(curSave, sqlSave, (result, testId, word ))
+        curSave.connection.commit()
+
+    def addTest(self, dChoice, wordType):
+        # dTest = {}
+        testTime = datetime.datetime.now()
+        testName = 'test'
+        pressId = None
+        bookId = None
+        unitId = None
+        lessonId = None
+        if dChoice['ChoiceSelected']['book']:
+            bookName = dChoice['ChoiceSelected']['book']
+            testName = bookName
+            bookId = dChoice['ChoiceBook'][bookName]
+            if dChoice['ChoiceSelected']['lesson']:
+                lessonName = dChoice['ChoiceSelected']['lesson']
+                testName = '%s %s' % (testName,lessonName)
+                lessonId = dChoice['ChoiceLesson'][lessonName]
+        if dChoice['ChoiceSelected']['press']:
+            pressName = dChoice['ChoiceSelected']['press']
+            pressId = dChoice['ChoicePress'][pressName]
+        if dChoice['ChoiceSelected']['unit']:
+            unitName = dChoice['ChoiceSelected']['unit']
+            unitId = dChoice['ChoiceUnit'][unitName]
+        aParam = (testTime, testName, wordType, pressId, bookId, unitId, lessonId)
+        sqlInsert = self.dSql['InsertTest']
+        self.openDs()
+
+        curInsert = self.db.prepareSql(sqlInsert)
+        self.db.executeCur(curInsert, sqlInsert, aParam)
+        curInsert.connection.commit()
+
+        sqlSearch = self.dSql['SearchTest']
+        curSearchTest = self.db.prepareSql(sqlSearch)
+        self.db.executeCur(curSearchTest, sqlSearch, aParam)
+        row = self.db.fetchone(curSearchTest)
+        if row:
+            # dTest[row[0]] = aParam
+            [row[0]].extend(aParam)
+            return row
+        else:
+            return None
 
     def importPress(self, aInfo):
         # pressName = ' '.join(aInfo[1:])
@@ -371,6 +437,10 @@ class DbBuilder(Builder):
         return fp
 
     def loadChoiceCommon(self, choiceKey, itemId):
+        dict = {}
+        dict[''] = None
+        if not itemId and choiceKey != 'ChoicePress' :
+            return dict
         self.openDs()
         sql = self.dSql[choiceKey]
         # cur = self.db.prepareSql(sql)
@@ -383,7 +453,7 @@ class DbBuilder(Builder):
         rows = self.db.fetchall(cur)
         cur.close()
         conn.close()
-        dict = {}
+
         for row in rows:
             key = ' '.join(row[1:])
             dict[key] = row[0]
@@ -518,6 +588,8 @@ class ListenWrite(object):
         self.builder = DbBuilder(self)
         self.player = Player(app)
         self.dInitSet = {}
+        self.wordType = 'new'
+        self.test = None
 
     def loadWords(self):
         # self.listenGroup = self.builder.makeGroup()
@@ -557,6 +629,18 @@ class ListenWrite(object):
     def pause(self):
         self.player.pause = 1
 
+    def addTest(self):
+        self.test = self.builder.addTest(self.dInitSet, self.wordType)
+
+    def saveTest(self, aWrongWores):
+        testId = self.test[0]
+        for wd in self.wordsGroup:
+            word = wd.word
+            result = 0
+            if word in aWrongWores:
+                result = 1
+            self.builder.insertResult(testId, word, result)
+
     def importWords(self, file):
         self.builder.importWords(file)
         self.app.m_button11.Enable(False)
@@ -586,6 +670,28 @@ class ListenWrite(object):
         self.dInitSet = dInitSet
         lessonId = dChoiceLesson[dChoiceSelected['lesson']]
         self.loadWordsByLesson(lessonId)
+
+        self.loadTime()
+        self.loadTest()
+        self.loadWordScope()
+
+    def loadTime(self):
+        dChoiceTime = {'全部':'all', '一天':'1day', '一周':'1week', '一月':'1month', '六月':'6months', '一年':'1year'}
+        self.dInitSet['ChoiceTime'] = dChoiceTime
+        self.dInitSet['ChoiceSelected']['Time'] = '全部'
+        return dChoiceTime
+
+    def loadTest(self):
+        dChoiceTest = {'全部':'all'}
+        self.dInitSet['ChoiceTest'] = dChoiceTest
+        self.dInitSet['ChoiceSelected']['Test'] = '全部'
+        return dChoiceTest
+
+    def loadWordScope(self):
+        dChoiceWordScope = {'全部':'all', '20':20, '50':50, '100':100}
+        self.dInitSet['ChoiceWordScope'] = dChoiceWordScope
+        self.dInitSet['ChoiceSelected']['WordScope'] = '全部'
+        return dChoiceWordScope
 
     def loadBook(self, pressId):
         dChoiceBook = self.builder.loadChoiceCommon('ChoiceBook', pressId)
@@ -764,14 +870,21 @@ class ListenWrite(object):
 #         tkinter.messagebox.showinfo('Help', msg)
 
 class WordChoice(listenwritewin.MyDialog1):
-    def __init__(self, parent):
+    def __init__(self, parent, wordtype):
         super(self.__class__, self).__init__(parent)
+        self.wordType = wordtype
         self.listenWriter = parent.listenWriter
         self.pressChoice = {}
         self.bookChoice = {}
         self.unitChoice = {}
         self.lessonChoice = {}
         self.choiceSelected = {}
+        self.choiceTime = {}
+        self.choiceTest = {}
+        self.choiceWordScope = {}
+        self.pressId = None
+        self.bookId = None
+        self.unitId = None
         self.lessonId = None
 
     def setInit(self, dInitSet):
@@ -781,6 +894,9 @@ class WordChoice(listenwritewin.MyDialog1):
             self.bookChoice = dInitSet['ChoiceBook']
             self.unitChoice = dInitSet['ChoiceUnit']
             self.lessonChoice = dInitSet['ChoiceLesson']
+            self.choiceTime = dInitSet['ChoiceTime']
+            self.choiceTest = dInitSet['ChoiceTest']
+            self.choiceWordScope = dInitSet['ChoiceWordScope']
         except Exception as e:
             msg = '%s: %s' % (e.__class__, str(e))
             wx.MessageBox(msg, '异常', wx.OK | wx.ICON_INFORMATION)
@@ -808,8 +924,26 @@ class WordChoice(listenwritewin.MyDialog1):
             self.m_choice8.Append(item)
             if item == self.choiceSelected['lesson']:
                 self.m_choice8.SetSelection(i)
-        self.lessonId = self.lessonChoice[self.choiceSelected['lesson']]
-        self.listenWriter.loadWordsByLesson(self.lessonId)
+        if self.wordType == 'new':
+            self.lessonId = self.lessonChoice[self.choiceSelected['lesson']]
+            self.listenWriter.loadWordsByLesson(self.lessonId)
+            return
+
+        aChoiceTime = dInitSet['ChoiceTime'].keys()
+        for i, item in enumerate(aChoiceTime):
+            self.m_choice71.Append(item)
+            if item == self.choiceSelected['Time']:
+                self.m_choice71.SetSelection(i)
+        aChoiceTest = dInitSet['ChoiceTest'].keys()
+        for i, item in enumerate(aChoiceTest):
+            self.m_choice81.Append(item)
+            if item == self.choiceSelected['Test']:
+                self.m_choice81.SetSelection(i)
+        aChoiceWordScope = dInitSet['ChoiceWordScope'].keys()
+        for i, item in enumerate(aChoiceWordScope):
+            self.m_choice9.Append(item)
+            if item == self.choiceSelected['WordScope']:
+                self.m_choice9.SetSelection(i)
 
     def pressSelect(self, event):
         press = self.m_choice5.GetStringSelection()
@@ -865,6 +999,14 @@ class WordChoice(listenwritewin.MyDialog1):
 
     def DoOk(self, event):
         self.listenWriter.dInitSet['ChoiceSelected'] = self.choiceSelected
+        self.listenWriter.dInitSet['ChoicePress'] = self.pressChoice
+        self.listenWriter.dInitSet['ChoiceBook'] = self.bookChoice
+        self.listenWriter.dInitSet['ChoiceUnit'] = self.unitChoice
+        self.listenWriter.dInitSet['ChoiceLesson'] = self.lessonChoice
+        self.listenWriter.dInitSet['ChoiceTime'] = self.choiceTime
+        self.listenWriter.dInitSet['ChoiceTest'] = self.choiceTest
+        self.listenWriter.dInitSet['ChoiceWordScope'] = self.choiceWordScope
+        self.listenWriter.wordType = self.wordType
         self.listenWriter.loadWordsByLesson(self.lessonId)
         self.EndModal(0)
 
@@ -900,9 +1042,13 @@ class LisWriFram(listenwritewin.MyFrame1):
         self.m_button15.Enable(False)
         self.m_button14.Enable(True)
         self.refreshCount()
+        self.listenWriter.addTest()
         t = threading.Thread(target=self.listenWriter.playWordes)
         t.setDaemon(True)
         t.start()
+
+    # def addTest(self):
+    #     pass
 
     def nextWord(self, event):
         # self.listenWriter.player.nextOne = 1
@@ -935,10 +1081,27 @@ class LisWriFram(listenwritewin.MyFrame1):
         #         self.text.SetValue(data)
         dlg.Destroy()
 
-    def toListen(self, event):
+    def listenNew(self, event):
         try:
-            selectForm = WordChoice(self)
+            selectForm = WordChoice(self, 'new')
             selectForm.setInit(self.listenWriter.dInitSet)
+            selectForm.m_staticText81.Enable(False)
+            selectForm.m_staticText101.Enable(False)
+            selectForm.m_staticText11.Enable(False)
+            selectForm.m_choice71.Enable(False)
+            selectForm.m_choice81.Enable(False)
+            selectForm.m_choice9.Enable(False)
+            selectForm.ShowModal()
+            self.m_button11.Enable(True)
+        except Exception as e:
+            msg = '%s: %s' % (e.__class__, str(e))
+            wx.MessageBox(msg, 'exception', wx.OK | wx.ICON_INFORMATION)
+
+    def listenWrong(self, event):
+        try:
+            selectForm = WordChoice(self, 'wrong')
+            selectForm.setInit(self.listenWriter.dInitSet)
+
             selectForm.ShowModal()
             self.m_button11.Enable(True)
         except Exception as e:
@@ -981,27 +1144,52 @@ class LisWriFram(listenwritewin.MyFrame1):
     def remarkError(self, event):
         wx.MessageBox(str(dir(event)), '选择词语', wx.OK | wx.ICON_INFORMATION)
         self.remarking = 1
+        self.defaultColour = self.m_grid2.GetDefaultCellBackgroundColour()
+        self.errColore = self.m_grid2.SelectC
+
+    def saveTest( self, event ):
+        # aWrongPosi = 'Selected %s' % self.m_grid2.GetSelectedCells()
+        # wx.MessageBox("RangeSelectCell: %s \n" % aWrongPosi)
+        aSelectedCells = self.m_grid2.GetSelectedCells()
+        aWrongWords = []
+        msg = ''
+        for cell in aSelectedCells:
+            aWrongWords.append(self.m_grid2.GetCellValue(cell.Row, cell.Col))
+        wx.MessageBox("wrong words: %s \n" % aWrongWords)
+        self.listenWriter.saveTest(aWrongWords)
 
     def saveError(self, event):
         self.remarking = 0
         event.Skip()
 
-    def remarkCell(self, evt):
+    def selectCell( self, event ):
         # if self.remarking == 0:
         #     return
-        if evt.Selecting():
-            msg = 'Selected'
-        else:
-            msg = 'Deselected'
-        wx.MessageBox("OnSelectCell: %s (%d,%d) %s\n" %
-                       (msg, evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+        pass
+        # if event.Selecting():
+        #     self.m_grid2.SelectCells(event.GetRow, event.GetCol)
+        #     msg = 'Selected %s' % self.m_grid2.SelectCells
+        # else:
+        #     msg = 'Deselected'
+        # wx.MessageBox("OnSelectCell: %s (%d,%d) %s\n" %
+        #                (msg, event.GetRow(), event.GetCol(), event.GetPosition()))
+        #
+        # # Another way to stay in a cell that has a bad value...
+        # row = self.m_grid2.GetGridCursorRow()
+        # col = self.m_grid2.GetGridCursorCol()
+        #
+        # # event.GetString()
+        # # wx.MessageBox(event.GetString(), '选择词语', wx.OK | wx.ICON_INFORMATION)
 
-        # Another way to stay in a cell that has a bad value...
-        row = self.m_grid2.GetGridCursorRow()
-        col = self.m_grid2.GetGridCursorCol()
-
-        # event.GetString()
-        # wx.MessageBox(event.GetString(), '选择词语', wx.OK | wx.ICON_INFORMATION)
+    def onRangeSelect(self, evt):
+        pass
+        # if evt.Selecting():
+        #     msg = 'Selected %s' % self.m_grid2.GetSelectedCells()
+        #     # self.m_grid2.GetSelectedCells()
+        # else:
+        #     msg = 'Deselected'
+        # wx.MessageBox("OnRangeSelectCell: %s top_left %s bottom_right %s\n" %
+        #                (msg, evt.GetTopLeftCoords(), evt.GetBottomRightCoords()))
 
 
 # start

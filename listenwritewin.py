@@ -18,17 +18,17 @@ import wx.grid
 class MyFrame1 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"词语听写", pos = wx.DefaultPosition, size = wx.Size( 1130,559 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"词语听写", pos = wx.DefaultPosition, size = wx.Size( 1150,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		self.SetFont( wx.Font( 20, 70, 90, 90, False, "宋体" ) )
 		
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
 		
-		self.m_grid2 = wx.grid.Grid( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.VSCROLL )
+		self.m_grid2 = wx.grid.Grid( self, wx.ID_ANY, wx.DefaultPosition, wx.Size( 1120,400 ), wx.VSCROLL )
 		
 		# Grid
-		self.m_grid2.CreateGrid( 10, 6 )
+		self.m_grid2.CreateGrid( 15, 6 )
 		self.m_grid2.EnableEditing( False )
 		self.m_grid2.EnableGridLines( True )
 		self.m_grid2.SetGridLineColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOWFRAME ) )
@@ -104,7 +104,7 @@ class MyFrame1 ( wx.Frame ):
 		self.m_button15 = wx.Button( self, wx.ID_ANY, u"继续", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer6.Add( self.m_button15, 0, wx.ALL, 5 )
 		
-		self.m_button6 = wx.Button( self, wx.ID_ANY, u"标记错词", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_button6 = wx.Button( self, wx.ID_ANY, u"记录结果", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer6.Add( self.m_button6, 0, wx.ALL, 5 )
 		
 		self.m_button8 = wx.Button( self, wx.ID_ANY, u"保存错词", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -147,23 +147,28 @@ class MyFrame1 ( wx.Frame ):
 		
 		
 		# Connect Events
-		self.m_grid2.Bind( wx.grid.EVT_GRID_SELECT_CELL, self.remarkCell )
+		self.m_grid2.Bind( wx.grid.EVT_GRID_RANGE_SELECT, self.onRangeSelect )
+		self.m_grid2.Bind( wx.grid.EVT_GRID_SELECT_CELL, self.selectCell )
 		self.m_button11.Bind( wx.EVT_BUTTON, self.displayWords )
 		self.m_button12.Bind( wx.EVT_BUTTON, self.startListen )
 		self.m_button13.Bind( wx.EVT_BUTTON, self.nextWord )
 		self.m_button14.Bind( wx.EVT_BUTTON, self.pause )
 		self.m_button15.Bind( wx.EVT_BUTTON, self.playContinue )
-		self.m_button6.Bind( wx.EVT_BUTTON, self.remarkError )
+		self.m_button6.Bind( wx.EVT_BUTTON, self.saveTest )
 		self.m_button8.Bind( wx.EVT_BUTTON, self.saveError )
 		self.Bind( wx.EVT_MENU, self.importWords, id = self.m_menuItem1.GetId() )
-		self.Bind( wx.EVT_MENU, self.toListen, id = self.m_menuItem2.GetId() )
+		self.Bind( wx.EVT_MENU, self.listenNew, id = self.m_menuItem2.GetId() )
+		self.Bind( wx.EVT_MENU, self.listenWrong, id = self.m_menuItem3.GetId() )
 	
 	def __del__( self ):
 		pass
 	
 	
 	# Virtual event handlers, overide them in your derived class
-	def remarkCell( self, event ):
+	def onRangeSelect( self, event ):
+		event.Skip()
+	
+	def selectCell( self, event ):
 		event.Skip()
 	
 	def displayWords( self, event ):
@@ -181,7 +186,7 @@ class MyFrame1 ( wx.Frame ):
 	def playContinue( self, event ):
 		event.Skip()
 	
-	def remarkError( self, event ):
+	def saveTest( self, event ):
 		event.Skip()
 	
 	def saveError( self, event ):
@@ -190,7 +195,10 @@ class MyFrame1 ( wx.Frame ):
 	def importWords( self, event ):
 		event.Skip()
 	
-	def toListen( self, event ):
+	def listenNew( self, event ):
+		event.Skip()
+	
+	def listenWrong( self, event ):
 		event.Skip()
 	
 
@@ -201,7 +209,7 @@ class MyFrame1 ( wx.Frame ):
 class MyDialog1 ( wx.Dialog ):
 	
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 488,308 ), style = wx.DEFAULT_DIALOG_STYLE )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 488,330 ), style = wx.DEFAULT_DIALOG_STYLE )
 		
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		
@@ -245,7 +253,34 @@ class MyDialog1 ( wx.Dialog ):
 		self.m_choice8.SetSelection( 0 )
 		fgSizer3.Add( self.m_choice8, 0, wx.ALL, 5 )
 		
-		self.m_button9 = wx.Button( self, wx.ID_ANY, u"确定", wx.Point( 1,5 ), wx.DefaultSize, 0 )
+		self.m_staticText81 = wx.StaticText( self, wx.ID_ANY, u"时间", wx.Point( 1,5 ), wx.DefaultSize, 0 )
+		self.m_staticText81.Wrap( -1 )
+		fgSizer3.Add( self.m_staticText81, 0, wx.ALL, 5 )
+		
+		m_choice71Choices = []
+		self.m_choice71 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice71Choices, 0 )
+		self.m_choice71.SetSelection( 0 )
+		fgSizer3.Add( self.m_choice71, 0, wx.ALL, 5 )
+		
+		self.m_staticText101 = wx.StaticText( self, wx.ID_ANY, u"测试", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText101.Wrap( -1 )
+		fgSizer3.Add( self.m_staticText101, 0, wx.ALL, 5 )
+		
+		m_choice81Choices = []
+		self.m_choice81 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice81Choices, 0 )
+		self.m_choice81.SetSelection( 0 )
+		fgSizer3.Add( self.m_choice81, 0, wx.ALL, 5 )
+		
+		self.m_staticText11 = wx.StaticText( self, wx.ID_ANY, u"词语", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText11.Wrap( -1 )
+		fgSizer3.Add( self.m_staticText11, 0, wx.ALL, 5 )
+		
+		m_choice9Choices = []
+		self.m_choice9 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice9Choices, 0 )
+		self.m_choice9.SetSelection( 0 )
+		fgSizer3.Add( self.m_choice9, 0, wx.ALL, 5 )
+		
+		self.m_button9 = wx.Button( self, wx.ID_ANY, u"确定", wx.Point( 1,8 ), wx.DefaultSize, 0 )
 		fgSizer3.Add( self.m_button9, 0, wx.ALL, 5 )
 		
 		
