@@ -241,13 +241,17 @@ class DbBuilder(Builder):
     dSql['ChoiceBook'] = 'select bookid,bookname,grade from lw_book where pressid=?'
     dSql['ChoiceUnit'] = 'select unitid,unitname from lw_unit where bookid=?'
     dSql['ChoiceLesson'] = 'select lessonid,lessoncode,lessonname from lw_lesson where unitid=?'
+    dSql['ChoiceTest'] = "select testname,strftime('%Y%m%d%H%M%S',testtime),testid,pressid,bookid,unitid,lessonid from lw_test where "
+    dSql['TestWords'] = "select distinct word from lw_testwords where result=1 and"
+    # testid in (?) and
 
-    dSql['SearchTest'] = 'select testid from lw_test where testtime=? and testname=? and type=? and pressid=? and bookid=? and unitid=? and lessonid=?'
+    dSql['SearchTest'] = 'select testid from lw_test where testtime=? and testname=? and type=? and pressid=?'
+    # and bookid =? and unitid =? and lessonid =?
     dSql['InsertTest'] = "insert into lw_test(testtime,testname,type,pressid,bookid,unitid,lessonid) values(?,?,?,?,?,?,?)"
     dSql['SearchTestWord'] = "select result from lw_testwords where testid=? and word=?"
     dSql['InsertTestWord'] = "insert into lw_testwords(result,testid,word) values(?,?,?)"
     dSql['UpdateTestWord'] = "update lw_testwords set result=? where testid=? and word=?"
-    dSql['TestWords'] = "select word from lw_testwords where testid=? and result=?"
+    dSql['TestWord'] = "select word from lw_testwords where testid=? and result=?"
 
     dSql['LessonWords'] = 'select word from lw_word where lessonId=?'
 
@@ -255,6 +259,7 @@ class DbBuilder(Builder):
         super(self.__class__, self).__init__(lstwrt)
         self.db = DbConn(self.dataSource)
         self.conn = None
+        self.openDs()
 
     def openDs(self):
         try:
@@ -325,27 +330,48 @@ class DbBuilder(Builder):
                 lessonName = dChoice['ChoiceSelected']['lesson']
                 testName = '%s %s' % (testName,lessonName)
                 lessonId = dChoice['ChoiceLesson'][lessonName]
+            elif dChoice['ChoiceSelected']['unit']:
+                unitName = dChoice['ChoiceSelected']['unit']
+                unitId = dChoice['ChoiceUnit'][unitName]
+                testName = '%s %s' % (testName, unitName)
         if dChoice['ChoiceSelected']['press']:
             pressName = dChoice['ChoiceSelected']['press']
             pressId = dChoice['ChoicePress'][pressName]
-        if dChoice['ChoiceSelected']['unit']:
-            unitName = dChoice['ChoiceSelected']['unit']
-            unitId = dChoice['ChoiceUnit'][unitName]
         aParam = (testTime, testName, wordType, pressId, bookId, unitId, lessonId)
         sqlInsert = self.dSql['InsertTest']
-        self.openDs()
+        # self.openDs()
 
+        # wx.MessageBox('add test sql: %s  param: %s' % (sqlInsert,aParam))
         curInsert = self.db.prepareSql(sqlInsert)
         self.db.executeCur(curInsert, sqlInsert, aParam)
         curInsert.connection.commit()
 
         sqlSearch = self.dSql['SearchTest']
+        # and bookid =? and unitid =? and lessonid =?
+        if aParam[4]:
+            sqlSearch = '%s and bookid=?' % sqlSearch
+        else:
+            sqlSearch = '%s and bookid is null'  % sqlSearch
+        if aParam[5]:
+            sqlSearch = '%s and unitid=?' % sqlSearch
+        else:
+            sqlSearch = '%s and unitid is null' % sqlSearch
+        if aParam[6]:
+            sqlSearch = '%s and lessonid=?' % sqlSearch
+        else:
+            sqlSearch = '%s and lessonid is null' % sqlSearch
+        lParam = list(aParam)
+        for i,pa in enumerate(lParam):
+            if not pa:
+                lParam.pop(i)
+        tParam = tuple(lParam)
         curSearchTest = self.db.prepareSql(sqlSearch)
-        self.db.executeCur(curSearchTest, sqlSearch, aParam)
+        # wx.MessageBox('search test sql: %s  param: %s' % (sqlSearch, tParam))
+        self.db.executeCur(curSearchTest, sqlSearch, tParam)
         row = self.db.fetchone(curSearchTest)
         if row:
             # dTest[row[0]] = aParam
-            [row[0]].extend(aParam)
+            [row[0]].extend(tParam)
             return row
         else:
             return None
@@ -436,23 +462,56 @@ class DbBuilder(Builder):
             exit()
         return fp
 
+    def loadTestWords(self, aTestId):
+        self.prdGroup = []
+        self.loadPrdWordes()
+        self.lisnGroup = []
+        sql = self.dSql['TestWords']
+        sTestIds = ','.join(aTestId)
+        sql = '%s testid in (%s)' % (sql, sTestIds)
+        # wx.MessageBox("loadTestWords: %s  %s\n" % (sql, sTestIds))
+        cur = self.db.executeSql(sql)
+        rows = self.db.fetchall(cur)
+        cur.close()
+        # wx.MessageBox("loadTestWords: %s\n" % rows)
+        aWords = []
+        for row in rows:
+            word = row[0]
+            # aWords.append(word)
+            lsnWord = ListenWord(word, self.listenWriter.listenSet, self.aipClient)
+            self.lisnGroup.append(lsnWord)
+        return self.lisnGroup
+
+    def loadTest(self, fieldName, fieldValue):
+        dict = {}
+        # dict[''] = None
+        sql = self.dSql['ChoiceTest']
+        sqlTest = '%s%s=?' % (sql, fieldName)
+        cur = self.db.executeSql(sqlTest, (fieldValue,))
+        rows = self.db.fetchall(cur)
+        cur.close()
+        for row in rows:
+            key = '%s %s' % (row[0], row[1])
+            dict[key] = row[2:]
+        return dict
+
     def loadChoiceCommon(self, choiceKey, itemId):
         dict = {}
         dict[''] = None
         if not itemId and choiceKey != 'ChoicePress' :
             return dict
-        self.openDs()
+        # self.openDs()
         sql = self.dSql[choiceKey]
         # cur = self.db.prepareSql(sql)
-        conn = self.db.connectServer()
-        cur = conn.cursor()
+        # conn = self.db.connectServer()
+        cur = self.conn.cursor()
         if itemId:
             self.db.executeCur(cur, sql, (itemId,))
         else:
             self.db.executeCur(cur, sql)
         rows = self.db.fetchall(cur)
         cur.close()
-        conn.close()
+        # conn.close()
 
         for row in rows:
             key = ' '.join(row[1:])
@@ -465,12 +524,12 @@ class DbBuilder(Builder):
         self.lisnGroup = []
         sql = self.dSql['LessonWords']
         # cur = self.db.prepareSql(sql)
-        conn = self.db.connectServer()
-        cur = conn.cursor()
+        # conn = self.db.connectServer()
+        cur = self.conn.cursor()
         self.db.executeCur(cur, sql, (lessonId,))
         rows = self.db.fetchall(cur)
         cur.close()
-        conn.close()
+        # self.conn.close()
         aWords = []
         for row in rows:
             word = row[0]
@@ -497,6 +556,9 @@ class DbConn(object):
             raise Exception(e)
             # exit()
         return self.conn
+
+    def getCursor(self):
+        return self.conn.cursor()
 
     def prepareSql(self, sql):
         # logging.info('prepare sql: %s', sql)
@@ -566,6 +628,35 @@ class DbConn(object):
         #     return None
         return cur
 
+    def executeSql(self, sql, params=None):
+        cur = self.conn.cursor()
+        # wx.MessageBox("sql: %s param: %s\n" % (sql, params))
+        try:
+            if params:
+                cur.execute(sql, params)
+            else:
+                cur.execute(sql)
+        except sqlite3.DatabaseError as e:
+            # logging.error('execute sql err %s:%s ', e, cur.statement)
+            # raise sqlite3.DatabaseError(e)
+            wx.MessageBox("dberror: %s on sql: %s\n" % (e, sql))
+            return None
+        return cur
+
+    def executeManySql(self, sql, aParams=None):
+        cur = self.conn.cursor()
+        try:
+            if aParams:
+                cur.executemany(sql, aParams)
+            else:
+                cur.execute(sql)
+        except sqlite3.DatabaseError as e:
+            # logging.error('execute sql err %s:%s ', e, cur.statement)
+            wx.MessageBox("dberror: %s on sql: %s  param: %s\n" % (e, sql, aParams))
+            # raise sqlite3.DatabaseError(e)
+            return None
+        return cur
+
 
 class ListenWrite(object):
     APP_ID = '10568246'
@@ -631,6 +722,7 @@ class ListenWrite(object):
 
     def addTest(self):
         self.test = self.builder.addTest(self.dInitSet, self.wordType)
+        # wx.MessageBox('test: %s' % self.test)
 
     def saveTest(self, aWrongWores):
         testId = self.test[0]
@@ -672,7 +764,12 @@ class ListenWrite(object):
         self.loadWordsByLesson(lessonId)
 
         self.loadTime()
-        self.loadTest()
+        testBy = ''
+        byId = ''
+        # self.loadTest(testBy, byId)
+        dChoiceTest = {'全部': 'all'}
+        self.dInitSet['ChoiceTest'] = dChoiceTest
+        self.dInitSet['ChoiceSelected']['Test'] = None
         self.loadWordScope()
 
     def loadTime(self):
@@ -681,10 +778,11 @@ class ListenWrite(object):
         self.dInitSet['ChoiceSelected']['Time'] = '全部'
         return dChoiceTime
 
-    def loadTest(self):
-        dChoiceTest = {'全部':'all'}
+    def loadTest(self, fieldName, fieldValue):
+        # dChoiceTest = {'全部':'all'}
+        dChoiceTest = self.builder.loadTest(fieldName, fieldValue)
         self.dInitSet['ChoiceTest'] = dChoiceTest
-        self.dInitSet['ChoiceSelected']['Test'] = '全部'
+        self.dInitSet['ChoiceSelected']['Test'] = None
         return dChoiceTest
 
     def loadWordScope(self):
@@ -718,6 +816,12 @@ class ListenWrite(object):
         t.setDaemon(True)
         t.start()
 
+    def loadWordsByTest(self, aTestId):
+        self.presenteWords = ['开始听写', '听写完毕']
+        self.wordsGroup = self.builder.loadTestWords(aTestId)
+        t = threading.Thread(target=self.makeVoice)
+        t.setDaemon(True)
+        t.start()
 
 # class Application(Frame):
 #     def __init__(self, master=None):
@@ -886,6 +990,7 @@ class WordChoice(listenwritewin.MyDialog1):
         self.bookId = None
         self.unitId = None
         self.lessonId = None
+        self.aTestId = []
 
     def setInit(self, dInitSet):
         try:
@@ -925,8 +1030,9 @@ class WordChoice(listenwritewin.MyDialog1):
             if item == self.choiceSelected['lesson']:
                 self.m_choice8.SetSelection(i)
         if self.wordType == 'new':
-            self.lessonId = self.lessonChoice[self.choiceSelected['lesson']]
-            self.listenWriter.loadWordsByLesson(self.lessonId)
+            if self.choiceSelected['lesson']:
+                self.lessonId = self.lessonChoice[self.choiceSelected['lesson']]
+                self.listenWriter.loadWordsByLesson(self.lessonId)
             return
 
         aChoiceTime = dInitSet['ChoiceTime'].keys()
@@ -947,27 +1053,34 @@ class WordChoice(listenwritewin.MyDialog1):
 
     def pressSelect(self, event):
         press = self.m_choice5.GetStringSelection()
-        if press == self.choiceSelected['press']:
-            return
+        # if press == self.choiceSelected['press']:
+        #     return
         self.choiceSelected['press'] = press
         pressId = self.pressChoice[press]
         self.bookChoice = self.listenWriter.loadBook(pressId)
-        # self.listenWriter.loadBook(pressId)
         self.choiceSelected['book'] = None
-        self.m_choice6.Clear()
-        for item in self.bookChoice.keys():
-            self.m_choice6.Append(item)
+        self.setChoiceItem(self.m_choice6, self.bookChoice.keys())
+        # self.m_choice6.Clear()
+        # for item in self.bookChoice.keys():
+        #     self.m_choice6.Append(item)
         self.unitChoice = {}
         self.choiceSelected['unit'] = None
         self.m_choice7.Clear()
         self.lessonChoice = {}
         self.choiceSelected['lesson'] = None
         self.m_choice8.Clear()
+        self.loadTest('pressid', pressId)
+
+    def setChoiceItem(self, choice, aItem):
+        choice.Clear()
+        for item in aItem:
+            choice.Append(item)
+        # choice.Au
 
     def bookSelect(self, event):
         book = self.m_choice6.GetStringSelection()
-        if book == self.choiceSelected['book']:
-            return
+        # if book == self.choiceSelected['book']:
+        #     return
         self.choiceSelected['book'] = book
         bookId = self.bookChoice[book]
         self.unitChoice = self.listenWriter.loadUnit(bookId)
@@ -978,24 +1091,44 @@ class WordChoice(listenwritewin.MyDialog1):
         self.lessonChoice = {}
         self.choiceSelected['lesson'] = None
         self.m_choice8.Clear()
+        self.loadTest('bookid', bookId)
 
     def unitSelect(self, event):
         unit = self.m_choice7.GetStringSelection()
-        if unit == self.choiceSelected['unit']:
-            return
+        # if unit == self.choiceSelected['unit']:
+        #     return
         self.choiceSelected['unit'] = unit
         unitId = self.unitChoice[unit]
         self.lessonChoice = self.listenWriter.loadLesson(unitId)
+        self.choiceSelected['lesson'] = None
         self.m_choice8.Clear()
         for item in self.lessonChoice.keys():
             self.m_choice8.Append(item)
+        self.loadTest('unitid', unitId)
 
     def lessonSelect(self, event):
         lesson = self.m_choice8.GetStringSelection()
-        if lesson == self.choiceSelected['lesson']:
-            return
+        # if lesson == self.choiceSelected['lesson']:
+        #     return
         self.choiceSelected['lesson'] = lesson
         self.lessonId = self.lessonChoice[lesson]
+        self.loadTest('lessonid', self.lessonId)
+
+    def loadTest(self, fieldName, fieldValue):
+        self.choiceTest = self.listenWriter.loadTest(fieldName, fieldValue)
+        self.choiceSelected['Test'] = None
+        self.setChoiceItem(self.m_choice81, self.choiceTest.keys())
+        self.aTestId = []
+        for key in self.choiceTest.keys():
+            testId = str(self.choiceTest[key][0])
+            self.aTestId.append(testId)
+
+    def testSelect(self, event):
+        test = self.m_choice81.GetStringSelection()
+        # if test == self.choiceSelected['Test']:
+        #     return
+        self.choiceSelected['Test'] = test
+        self.aTestId = [str(self.choiceTest[test][0])]
 
     def DoOk(self, event):
         self.listenWriter.dInitSet['ChoiceSelected'] = self.choiceSelected
@@ -1007,7 +1140,13 @@ class WordChoice(listenwritewin.MyDialog1):
         self.listenWriter.dInitSet['ChoiceTest'] = self.choiceTest
         self.listenWriter.dInitSet['ChoiceWordScope'] = self.choiceWordScope
         self.listenWriter.wordType = self.wordType
-        self.listenWriter.loadWordsByLesson(self.lessonId)
+        if self.wordType == 'new':
+            self.listenWriter.loadWordsByLesson(self.lessonId)
+        elif self.wordType == 'wrong':
+            if len(self.aTestId) > 0:
+                self.listenWriter.loadWordsByTest(self.aTestId)
+            else:
+                wx.MessageBox("No test was selected.")
         self.EndModal(0)
 
 
@@ -1082,20 +1221,30 @@ class LisWriFram(listenwritewin.MyFrame1):
         dlg.Destroy()
 
     def listenNew(self, event):
-        try:
-            selectForm = WordChoice(self, 'new')
-            selectForm.setInit(self.listenWriter.dInitSet)
-            selectForm.m_staticText81.Enable(False)
-            selectForm.m_staticText101.Enable(False)
-            selectForm.m_staticText11.Enable(False)
-            selectForm.m_choice71.Enable(False)
-            selectForm.m_choice81.Enable(False)
-            selectForm.m_choice9.Enable(False)
-            selectForm.ShowModal()
-            self.m_button11.Enable(True)
-        except Exception as e:
-            msg = '%s: %s' % (e.__class__, str(e))
-            wx.MessageBox(msg, 'exception', wx.OK | wx.ICON_INFORMATION)
+        selectForm = WordChoice(self, 'new')
+        selectForm.setInit(self.listenWriter.dInitSet)
+        selectForm.m_staticText81.Enable(False)
+        selectForm.m_staticText101.Enable(False)
+        selectForm.m_staticText11.Enable(False)
+        selectForm.m_choice71.Enable(False)
+        selectForm.m_choice81.Enable(False)
+        selectForm.m_choice9.Enable(False)
+        selectForm.ShowModal()
+        self.m_button11.Enable(True)
+        # try:
+        #     selectForm = WordChoice(self, 'new')
+        #     selectForm.setInit(self.listenWriter.dInitSet)
+        #     selectForm.m_staticText81.Enable(False)
+        #     selectForm.m_staticText101.Enable(False)
+        #     selectForm.m_staticText11.Enable(False)
+        #     selectForm.m_choice71.Enable(False)
+        #     selectForm.m_choice81.Enable(False)
+        #     selectForm.m_choice9.Enable(False)
+        #     selectForm.ShowModal()
+        #     self.m_button11.Enable(True)
+        # except Exception as e:
+        #     msg = '%s: %s' % (e.__class__, str(e))
+        #     wx.MessageBox(msg, 'exception', wx.OK | wx.ICON_INFORMATION)
 
     def listenWrong(self, event):
         try:
@@ -1112,7 +1261,8 @@ class LisWriFram(listenwritewin.MyFrame1):
         wx.MessageBox("听写错词。。。", '听写', wx.OK | wx.ICON_INFORMATION)
 
     def displayWords(self, event):
-        self.wordCount = 0
+        # self.wordCount = 0
+        self.refreshCount()
         aWords = self.listenWriter.wordsGroup
         for i,word in enumerate(aWords):
             row = i // 6
