@@ -62,7 +62,7 @@
             <event name="OnAuiPaneRestore"></event>
             <event name="OnAuiRender"></event>
             <event name="OnChar"></event>
-            <event name="OnClose"></event>
+            <event name="OnClose">closeApp</event>
             <event name="OnEnterWindow"></event>
             <event name="OnEraseBackground"></event>
             <event name="OnHibernate"></event>
@@ -170,7 +170,7 @@
                         <property name="row_label_values"></property>
                         <property name="row_label_vert_alignment">wxALIGN_CENTRE</property>
                         <property name="row_sizes">35,35,35,35,35,35,35,35,35,35</property>
-                        <property name="rows">15</property>
+                        <property name="rows">20</property>
                         <property name="show">1</property>
                         <property name="size">1120,400</property>
                         <property name="subclass"></property>

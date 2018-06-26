@@ -237,6 +237,9 @@ class DbBuilder(Builder):
     dSql['SearchWord'] = 'select word from lw_word where lessonid=? and word=?'
     dSql['InsertWord'] = 'insert into lw_word(lessonid,word) values(?,?)'
 
+    dSql['SearchSelected'] = 'select choicename,choicevalue from lw_choiceselected'
+    dSql['SaveSelected'] = "update lw_choiceselected set choicevalue=? where choicename=?"
+
     dSql['ChoicePress'] = 'select pressid,pname from lw_press'
     dSql['ChoiceBook'] = 'select bookid,bookname,grade from lw_book where pressid=?'
     dSql['ChoiceUnit'] = 'select unitid,unitname from lw_unit where bookid=?'
@@ -330,7 +333,7 @@ class DbBuilder(Builder):
                 lessonName = dChoice['ChoiceSelected']['lesson']
                 testName = '%s %s' % (testName,lessonName)
                 lessonId = dChoice['ChoiceLesson'][lessonName]
-            elif dChoice['ChoiceSelected']['unit']:
+            if dChoice['ChoiceSelected']['unit']:
                 unitName = dChoice['ChoiceSelected']['unit']
                 unitId = dChoice['ChoiceUnit'][unitName]
                 testName = '%s %s' % (testName, unitName)
@@ -482,15 +485,42 @@ class DbBuilder(Builder):
             self.lisnGroup.append(lsnWord)
         return self.lisnGroup
 
+    def saveSelected(self, dSelected):
+        sql = self.dSql['SaveSelected']
+
+        aPara = []
+        for key in dSelected:
+            para = (dSelected[key], key)
+            aPara.append(para)
+        cur = self.db.executeManySql(sql, aPara)
+        cur.connection.commit()
+        cur.close
+
+    def loadSelected(self):
+        dSelected = {}
+        sql = self.dSql['SearchSelected']
+        cur = self.db.executeSql(sql)
+        rows = self.db.fetchall(cur)
+        cur.close()
+        for row in rows:
+            dSelected[row[0]] = row[1]
+        # print(dSelected)
+        return dSelected
+
     def loadTest(self, fieldName, fieldValue):
         dict = {}
         # dict[''] = None
         sql = self.dSql['ChoiceTest']
         sqlTest = '%s%s=?' % (sql, fieldName)
+        # print(sqlTest)
+        # print(fieldValue)
         cur = self.db.executeSql(sqlTest, (fieldValue,))
+        # cur = self.db.prepareSql(sqlTest)
+        # cur = self.db.executeCur(cur, sqlTest, (fieldValue,))
         rows = self.db.fetchall(cur)
         cur.close()
         for row in rows:
+            # print(row)
             key = '%s %s' % (row[0], row[1])
             dict[key] = row[2:]
         return dict
@@ -739,56 +769,80 @@ class ListenWrite(object):
 
     def loadInit(self):
         dInitSet = {}
-        dChoiceSelected = {'press':'人民教育出版社'}
-        dChoiceSelected['book'] = '语文 四年级下'
-        dChoiceSelected['unit'] = '五单元'
-        dChoiceSelected['lesson'] = '19 花的勇气'
+        dChoiceSelected = self.builder.loadSelected()
+        # dChoiceSelected = {'press':'人民教育出版社'}
+        # dChoiceSelected['book'] = '语文 四年级下'
+        # dChoiceSelected['unit'] = '五单元'
+        # dChoiceSelected['lesson'] = '19 花的勇气'
         dInitSet['ChoiceSelected'] = dChoiceSelected
 
         dChoicePress = self.builder.loadChoiceCommon('ChoicePress', None)
         dInitSet['ChoicePress'] = dChoicePress
 
-        pressId = dChoicePress[dChoiceSelected['press']]
+        if dChoiceSelected['press']:
+            pressId = dChoicePress[dChoiceSelected['press']]
+        else:
+            pressId = None
         dChoiceBook = self.builder.loadChoiceCommon('ChoiceBook', pressId)
         dInitSet['ChoiceBook'] = dChoiceBook
+        dInitSet['ChoiceTest'] = self.loadTest('pressid', pressId)
 
-        bookId = dChoiceBook[dChoiceSelected['book']]
+        if dChoiceSelected['book']:
+            bookId = dChoiceBook[dChoiceSelected['book']]
+        else:
+            bookId = None
         dChoiceUnit = self.builder.loadChoiceCommon('ChoiceUnit', bookId)
         dInitSet['ChoiceUnit'] = dChoiceUnit
+        dInitSet['ChoiceTest'] = self.loadTest('bookid', bookId)
 
-        unitId = dChoiceUnit[dChoiceSelected['unit']]
+        if dChoiceSelected['unit']:
+            unitId = dChoiceUnit[dChoiceSelected['unit']]
+        else:
+            unitId = None
         dChoiceLesson = self.builder.loadChoiceCommon('ChoiceLesson', unitId)
         dInitSet['ChoiceLesson'] = dChoiceLesson
+        dInitSet['ChoiceTest'] = self.loadTest('unitid', unitId)
+
+        if dChoiceSelected['lesson']:
+            lessonId = dChoiceLesson[dChoiceSelected['lesson']]
+        else:
+            lessonId = None
+        self.lessonId = lessonId
+        # self.loadWordsByLesson(lessonId)
+        dInitSet['ChoiceTest'] = self.loadTest('lessonid', lessonId)
         self.dInitSet = dInitSet
-        lessonId = dChoiceLesson[dChoiceSelected['lesson']]
-        self.loadWordsByLesson(lessonId)
 
         self.loadTime()
-        testBy = ''
-        byId = ''
-        # self.loadTest(testBy, byId)
-        dChoiceTest = {'全部': 'all'}
-        self.dInitSet['ChoiceTest'] = dChoiceTest
-        self.dInitSet['ChoiceSelected']['Test'] = None
+        # testBy = ''
+        # byId = ''
+        # # self.loadTest(testBy, byId)
+        # dChoiceTest = {'全部': 'all'}
+        # self.dInitSet['ChoiceTest'] = dChoiceTest
+        # self.dInitSet['ChoiceSelected']['Test'] = None
         self.loadWordScope()
 
+    def saveSelected(self):
+        self.builder.saveSelected(self.dInitSet['ChoiceSelected'])
+
     def loadTime(self):
-        dChoiceTime = {'全部':'all', '一天':'1day', '一周':'1week', '一月':'1month', '六月':'6months', '一年':'1year'}
+        dChoiceTime = {'上次测试':'last', '当天测试':'1day', '一周内测试':'1week', '一月内测试':'1month', '六月内测试':'6months', '一年内测试':'1year', '全部测试':'all'}
         self.dInitSet['ChoiceTime'] = dChoiceTime
-        self.dInitSet['ChoiceSelected']['Time'] = '全部'
+        # self.dInitSet['ChoiceSelected']['Time'] = '上次测试'
         return dChoiceTime
 
     def loadTest(self, fieldName, fieldValue):
         # dChoiceTest = {'全部':'all'}
+        if fieldValue is None:
+            return {}
         dChoiceTest = self.builder.loadTest(fieldName, fieldValue)
         self.dInitSet['ChoiceTest'] = dChoiceTest
-        self.dInitSet['ChoiceSelected']['Test'] = None
+        # self.dInitSet['ChoiceSelected']['Test'] = None
         return dChoiceTest
 
     def loadWordScope(self):
         dChoiceWordScope = {'全部':'all', '20':20, '50':50, '100':100}
         self.dInitSet['ChoiceWordScope'] = dChoiceWordScope
-        self.dInitSet['ChoiceSelected']['WordScope'] = '全部'
+        # self.dInitSet['ChoiceSelected']['WordScope'] = '全部'
         return dChoiceWordScope
 
     def loadBook(self, pressId):
@@ -1007,28 +1061,32 @@ class WordChoice(listenwritewin.MyDialog1):
             wx.MessageBox(msg, '异常', wx.OK | wx.ICON_INFORMATION)
 
         aPressChoice = dInitSet['ChoicePress'].keys()
-        for i,item in enumerate(aPressChoice):
-            self.m_choice5.Append(item)
-            if item == self.choiceSelected['press']:
-                self.m_choice5.SetSelection(i)
+        self.setChoiceItem(self.m_choice5, aPressChoice, self.choiceSelected['press'])
+        # for i,item in enumerate(aPressChoice):
+        #     self.m_choice5.Append(item)
+        #     if item == self.choiceSelected['press']:
+        #         self.m_choice5.SetSelection(i)
 
         aBookChoice = dInitSet['ChoiceBook'].keys()
-        for i,item in enumerate(aBookChoice):
-            self.m_choice6.Append(item)
-            if item == self.choiceSelected['book']:
-                self.m_choice6.SetSelection(i)
+        self.setChoiceItem(self.m_choice6, aBookChoice, self.choiceSelected['book'])
+        # for i,item in enumerate(aBookChoice):
+        #     self.m_choice6.Append(item)
+        #     if item == self.choiceSelected['book']:
+        #         self.m_choice6.SetSelection(i)
 
         aUnitChoice = dInitSet['ChoiceUnit'].keys()
-        for i,item in enumerate(aUnitChoice):
-            self.m_choice7.Append(item)
-            if item == self.choiceSelected['unit']:
-                self.m_choice7.SetSelection(i)
+        self.setChoiceItem(self.m_choice7, aUnitChoice, self.choiceSelected['unit'])
+        # for i,item in enumerate(aUnitChoice):
+        #     self.m_choice7.Append(item)
+        #     if item == self.choiceSelected['unit']:
+        #         self.m_choice7.SetSelection(i)
 
         aLessonChoice = dInitSet['ChoiceLesson'].keys()
-        for i,item in enumerate(aLessonChoice):
-            self.m_choice8.Append(item)
-            if item == self.choiceSelected['lesson']:
-                self.m_choice8.SetSelection(i)
+        self.setChoiceItem(self.m_choice8, aLessonChoice, self.choiceSelected['lesson'])
+        # for i,item in enumerate(aLessonChoice):
+        #     self.m_choice8.Append(item)
+        #     if item == self.choiceSelected['lesson']:
+        #         self.m_choice8.SetSelection(i)
         if self.wordType == 'new':
             if self.choiceSelected['lesson']:
                 self.lessonId = self.lessonChoice[self.choiceSelected['lesson']]
@@ -1036,45 +1094,48 @@ class WordChoice(listenwritewin.MyDialog1):
             return
 
         aChoiceTime = dInitSet['ChoiceTime'].keys()
-        for i, item in enumerate(aChoiceTime):
-            self.m_choice71.Append(item)
-            if item == self.choiceSelected['Time']:
-                self.m_choice71.SetSelection(i)
+        self.setChoiceItem(self.m_choice71, aChoiceTime, self.choiceSelected['Time'])
+        # for i, item in enumerate(aChoiceTime):
+        #     self.m_choice71.Append(item)
+        #     if item == self.choiceSelected['Time']:
+        #         self.m_choice71.SetSelection(i)
         aChoiceTest = dInitSet['ChoiceTest'].keys()
-        for i, item in enumerate(aChoiceTest):
-            self.m_choice81.Append(item)
-            if item == self.choiceSelected['Test']:
-                self.m_choice81.SetSelection(i)
+        self.setChoiceItem(self.m_choice81, aChoiceTest, self.choiceSelected['Test'])
+        # for i, item in enumerate(aChoiceTest):
+        #     self.m_choice81.Append(item)
+        #     if item == self.choiceSelected['Test']:
+        #         self.m_choice81.SetSelection(i)
         aChoiceWordScope = dInitSet['ChoiceWordScope'].keys()
-        for i, item in enumerate(aChoiceWordScope):
-            self.m_choice9.Append(item)
-            if item == self.choiceSelected['WordScope']:
-                self.m_choice9.SetSelection(i)
+        self.setChoiceItem(self.m_choice9, aChoiceWordScope, self.choiceSelected['WordScope'])
+        # for i, item in enumerate(aChoiceWordScope):
+        #     self.m_choice9.Append(item)
+        #     if item == self.choiceSelected['WordScope']:
+        #         self.m_choice9.SetSelection(i)
 
     def pressSelect(self, event):
         press = self.m_choice5.GetStringSelection()
-        # if press == self.choiceSelected['press']:
-        #     return
         self.choiceSelected['press'] = press
         pressId = self.pressChoice[press]
         self.bookChoice = self.listenWriter.loadBook(pressId)
         self.choiceSelected['book'] = None
         self.setChoiceItem(self.m_choice6, self.bookChoice.keys())
-        # self.m_choice6.Clear()
-        # for item in self.bookChoice.keys():
-        #     self.m_choice6.Append(item)
         self.unitChoice = {}
         self.choiceSelected['unit'] = None
         self.m_choice7.Clear()
         self.lessonChoice = {}
         self.choiceSelected['lesson'] = None
         self.m_choice8.Clear()
-        self.loadTest('pressid', pressId)
+        if self.wordType == 'wrong':
+            self.loadTest('pressid', pressId)
 
-    def setChoiceItem(self, choice, aItem):
+    def setChoiceItem(self, choice, aItem, selected=None):
         choice.Clear()
-        for item in aItem:
+        for i, item in enumerate(aItem):
             choice.Append(item)
+            if selected is None:
+                continue
+            if item == selected:
+                choice.SetSelection(i)
         # choice.Au
 
     def bookSelect(self, event):
@@ -1085,13 +1146,15 @@ class WordChoice(listenwritewin.MyDialog1):
         bookId = self.bookChoice[book]
         self.unitChoice = self.listenWriter.loadUnit(bookId)
         self.choiceSelected['unit'] = None
-        self.m_choice7.Clear()
-        for item in self.unitChoice.keys():
-            self.m_choice7.Append(item)
+        self.setChoiceItem(self.m_choice7, self.unitChoice.keys())
+        # self.m_choice7.Clear()
+        # for item in self.unitChoice.keys():
+        #     self.m_choice7.Append(item)
         self.lessonChoice = {}
         self.choiceSelected['lesson'] = None
         self.m_choice8.Clear()
-        self.loadTest('bookid', bookId)
+        if self.wordType == 'wrong':
+            self.loadTest('bookid', bookId)
 
     def unitSelect(self, event):
         unit = self.m_choice7.GetStringSelection()
@@ -1101,18 +1164,21 @@ class WordChoice(listenwritewin.MyDialog1):
         unitId = self.unitChoice[unit]
         self.lessonChoice = self.listenWriter.loadLesson(unitId)
         self.choiceSelected['lesson'] = None
-        self.m_choice8.Clear()
-        for item in self.lessonChoice.keys():
-            self.m_choice8.Append(item)
-        self.loadTest('unitid', unitId)
+        self.setChoiceItem(self.m_choice8, self.lessonChoice.keys())
+        # self.m_choice8.Clear()
+        # for item in self.lessonChoice.keys():
+        #     self.m_choice8.Append(item)
+        if self.wordType == 'wrong':
+            self.loadTest('unitid', unitId)
 
     def lessonSelect(self, event):
         lesson = self.m_choice8.GetStringSelection()
-        # if lesson == self.choiceSelected['lesson']:
-        #     return
+
         self.choiceSelected['lesson'] = lesson
         self.lessonId = self.lessonChoice[lesson]
-        self.loadTest('lessonid', self.lessonId)
+        # print('lessonid: %s' % self.lessonId)
+        if self.wordType == 'wrong':
+            self.loadTest('lessonid', self.lessonId)
 
     def loadTest(self, fieldName, fieldValue):
         self.choiceTest = self.listenWriter.loadTest(fieldName, fieldValue)
@@ -1163,6 +1229,10 @@ class LisWriFram(listenwritewin.MyFrame1):
 
     def loadInitSet(self):
         self.listenWriter.loadInit()
+
+    def closeApp(self, event):
+        self.listenWriter.saveSelected()
+        event.Skip()
 
     def loadWords(self, event):
         self.loaded = 1
@@ -1357,5 +1427,6 @@ if __name__ == '__main__':
     frame = LisWriFram(None)
     frame.Show(True)
     # frame.loadWords(None)
+    # app.
     app.MainLoop()
 

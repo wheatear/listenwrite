@@ -147,6 +147,7 @@ class MyFrame1 ( wx.Frame ):
 		
 		
 		# Connect Events
+		self.Bind( wx.EVT_CLOSE, self.closeApp )
 		self.m_grid2.Bind( wx.grid.EVT_GRID_RANGE_SELECT, self.onRangeSelect )
 		self.m_grid2.Bind( wx.grid.EVT_GRID_SELECT_CELL, self.selectCell )
 		self.m_button11.Bind( wx.EVT_BUTTON, self.displayWords )
@@ -165,6 +166,9 @@ class MyFrame1 ( wx.Frame ):
 	
 	
 	# Virtual event handlers, overide them in your derived class
+	def closeApp( self, event ):
+		event.Skip()
+	
 	def onRangeSelect( self, event ):
 		event.Skip()
 	
