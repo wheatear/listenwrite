@@ -20,7 +20,7 @@ class MyFrame1 ( wx.Frame ):
 	def __init__( self, parent ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"词语听写", pos = wx.DefaultPosition, size = wx.Size( 1150,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
-		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		self.SetFont( wx.Font( 20, 70, 90, 90, False, "宋体" ) )
 		
 		bSizer3 = wx.BoxSizer( wx.VERTICAL )
@@ -121,16 +121,16 @@ class MyFrame1 ( wx.Frame ):
 		
 		self.m_menu1 = wx.Menu()
 		self.m_menuItem1 = wx.MenuItem( self.m_menu1, wx.ID_ANY, u"导入词语", wx.EmptyString, wx.ITEM_NORMAL )
-		self.m_menu1.Append( self.m_menuItem1 )
+		self.m_menu1.AppendItem( self.m_menuItem1 )
 		
 		self.m_menubar1.Append( self.m_menu1, u"文件" ) 
 		
 		self.m_menu2 = wx.Menu()
 		self.m_menuItem2 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"生词", wx.EmptyString, wx.ITEM_NORMAL )
-		self.m_menu2.Append( self.m_menuItem2 )
+		self.m_menu2.AppendItem( self.m_menuItem2 )
 		
 		self.m_menuItem3 = wx.MenuItem( self.m_menu2, wx.ID_ANY, u"错词", wx.EmptyString, wx.ITEM_NORMAL )
-		self.m_menu2.Append( self.m_menuItem3 )
+		self.m_menu2.AppendItem( self.m_menuItem3 )
 		
 		self.m_menubar1.Append( self.m_menu2, u"词语" ) 
 		
@@ -139,7 +139,7 @@ class MyFrame1 ( wx.Frame ):
 		
 		self.m_menu4 = wx.Menu()
 		self.m_menuItem4 = wx.MenuItem( self.m_menu4, wx.ID_ANY, u"帮助", wx.EmptyString, wx.ITEM_NORMAL )
-		self.m_menu4.Append( self.m_menuItem4 )
+		self.m_menu4.AppendItem( self.m_menuItem4 )
 		
 		self.m_menubar1.Append( self.m_menu4, u"帮助" ) 
 		
@@ -215,7 +215,7 @@ class MyDialog1 ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 488,330 ), style = wx.DEFAULT_DIALOG_STYLE )
 		
-		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		
 		fgSizer3 = wx.FlexGridSizer( 0, 2, 0, 0 )
 		fgSizer3.SetFlexibleDirection( wx.BOTH )
@@ -298,7 +298,9 @@ class MyDialog1 ( wx.Dialog ):
 		self.m_choice6.Bind( wx.EVT_CHOICE, self.bookSelect )
 		self.m_choice7.Bind( wx.EVT_CHOICE, self.unitSelect )
 		self.m_choice8.Bind( wx.EVT_CHOICE, self.lessonSelect )
+		self.m_choice71.Bind( wx.EVT_CHOICE, self.timeSelect )
 		self.m_choice81.Bind( wx.EVT_CHOICE, self.testSelect )
+		self.m_choice9.Bind( wx.EVT_CHOICE, self.scopeSelect )
 		self.m_button9.Bind( wx.EVT_BUTTON, self.DoOk )
 	
 	def __del__( self ):
@@ -318,7 +320,13 @@ class MyDialog1 ( wx.Dialog ):
 	def lessonSelect( self, event ):
 		event.Skip()
 	
+	def timeSelect( self, event ):
+		event.Skip()
+	
 	def testSelect( self, event ):
+		event.Skip()
+	
+	def scopeSelect( self, event ):
 		event.Skip()
 	
 	def DoOk( self, event ):

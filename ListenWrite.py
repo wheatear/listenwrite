@@ -15,6 +15,7 @@ import mp3play, time
 import datetime
 import os
 import re
+import random
 import sqlite3
 # from tkinter import *
 # import tkinter.messagebox
@@ -711,6 +712,7 @@ class ListenWrite(object):
         self.dInitSet = {}
         self.wordType = 'new'
         self.test = None
+        self.aScopeId = []
 
     def loadWords(self):
         # self.listenGroup = self.builder.makeGroup()
@@ -840,7 +842,7 @@ class ListenWrite(object):
         return dChoiceTest
 
     def loadWordScope(self):
-        dChoiceWordScope = {'全部':'all', '20':20, '50':50, '100':100}
+        dChoiceWordScope = {'全部':'all', '前20':'first 20', '前50':'first 50', '前100':'first 100', '随机20':'sample 20', '随机50':'sample 50', '随机100':'sample 100'}
         self.dInitSet['ChoiceWordScope'] = dChoiceWordScope
         # self.dInitSet['ChoiceSelected']['WordScope'] = '全部'
         return dChoiceWordScope
@@ -863,9 +865,27 @@ class ListenWrite(object):
         self.dInitSet['ChoiceSelected']['lesson'] = None
         return dChoiceLesson
 
+    def selectWordes(self):
+        selectType = ''
+        selectNum = 0
+        if len(self.aScopeId) > 0:
+            selectType = self.aScopeId[0]
+            selectNum = int(self.aScopeId[1])
+        if selectNum == 0:
+            return
+        aSelectWordes = []
+        if selectType == 'sample':
+            aSelectWordes = random.sample(self.wordsGroup, selectNum)
+        elif selectType == 'first':
+            aSelectWordes = self.wordsGroup[:selectNum]
+        else:
+            aSelectWordes = self.wordsGroup
+        self.wordsGroup = aSelectWordes
+
     def loadWordsByLesson(self, lessonId):
         self.presenteWords = ['开始听写', '听写完毕']
         self.wordsGroup = self.builder.loadLessonWords(lessonId)
+        self.selectWordes()
         t = threading.Thread(target=self.makeVoice)
         t.setDaemon(True)
         t.start()
@@ -873,6 +893,7 @@ class ListenWrite(object):
     def loadWordsByTest(self, aTestId):
         self.presenteWords = ['开始听写', '听写完毕']
         self.wordsGroup = self.builder.loadTestWords(aTestId)
+        self.selectWordes()
         t = threading.Thread(target=self.makeVoice)
         t.setDaemon(True)
         t.start()
@@ -1045,6 +1066,7 @@ class WordChoice(listenwritewin.MyDialog1):
         self.unitId = None
         self.lessonId = None
         self.aTestId = []
+        self.scopeId = []
 
     def setInit(self, dInitSet):
         try:
@@ -1087,6 +1109,10 @@ class WordChoice(listenwritewin.MyDialog1):
         #     self.m_choice8.Append(item)
         #     if item == self.choiceSelected['lesson']:
         #         self.m_choice8.SetSelection(i)
+
+        aChoiceWordScope = dInitSet['ChoiceWordScope'].keys()
+        self.setChoiceItem(self.m_choice9, aChoiceWordScope, self.choiceSelected['WordScope'])
+
         if self.wordType == 'new':
             if self.choiceSelected['lesson']:
                 self.lessonId = self.lessonChoice[self.choiceSelected['lesson']]
@@ -1105,8 +1131,7 @@ class WordChoice(listenwritewin.MyDialog1):
         #     self.m_choice81.Append(item)
         #     if item == self.choiceSelected['Test']:
         #         self.m_choice81.SetSelection(i)
-        aChoiceWordScope = dInitSet['ChoiceWordScope'].keys()
-        self.setChoiceItem(self.m_choice9, aChoiceWordScope, self.choiceSelected['WordScope'])
+
         # for i, item in enumerate(aChoiceWordScope):
         #     self.m_choice9.Append(item)
         #     if item == self.choiceSelected['WordScope']:
@@ -1189,12 +1214,21 @@ class WordChoice(listenwritewin.MyDialog1):
             testId = str(self.choiceTest[key][0])
             self.aTestId.append(testId)
 
+    def timeSelect(self, event):
+        testTime = self.m_choice71.GetStringSelection()
+        self.choiceSelected['Time'] = testTime
+
     def testSelect(self, event):
         test = self.m_choice81.GetStringSelection()
         # if test == self.choiceSelected['Test']:
         #     return
         self.choiceSelected['Test'] = test
         self.aTestId = [str(self.choiceTest[test][0])]
+
+    def scopeSelect(self, event):
+        scope = self.m_choice9.GetStringSelection()
+        self.choiceSelected['WordScope'] = scope
+        self.scopeId = self.choiceWordScope[scope].split()
 
     def DoOk(self, event):
         self.listenWriter.dInitSet['ChoiceSelected'] = self.choiceSelected
@@ -1206,6 +1240,7 @@ class WordChoice(listenwritewin.MyDialog1):
         self.listenWriter.dInitSet['ChoiceTest'] = self.choiceTest
         self.listenWriter.dInitSet['ChoiceWordScope'] = self.choiceWordScope
         self.listenWriter.wordType = self.wordType
+        self.listenWriter.aScopeId = self.scopeId
         if self.wordType == 'new':
             self.listenWriter.loadWordsByLesson(self.lessonId)
         elif self.wordType == 'wrong':
@@ -1295,10 +1330,10 @@ class LisWriFram(listenwritewin.MyFrame1):
         selectForm.setInit(self.listenWriter.dInitSet)
         selectForm.m_staticText81.Enable(False)
         selectForm.m_staticText101.Enable(False)
-        selectForm.m_staticText11.Enable(False)
+        # selectForm.m_staticText11.Enable(False)
         selectForm.m_choice71.Enable(False)
         selectForm.m_choice81.Enable(False)
-        selectForm.m_choice9.Enable(False)
+        # selectForm.m_choice9.Enable(False)
         selectForm.ShowModal()
         self.m_button11.Enable(True)
         # try:
